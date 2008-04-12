@@ -38,10 +38,26 @@
 
 
 @interface MPDClientApplication :  UIApplication {
-   UIView       *mainView;
-   UITextView   *textView;
+   UIView       *m_mainView;
+   UITextView   *m_textView;
+   
+   UIButtonBar  *m_buttonBar;
+   int          m_currentView;
 
-   NSMutableArray *songs;
+   NSMutableArray *m_songs;
 }
 - (void)fill_playlist;
+- (void)cleanUp;
 @end
+
+extern NSString *kUIButtonBarButtonAction;
+extern NSString *kUIButtonBarButtonInfo;
+extern NSString *kUIButtonBarButtonInfoOffset;
+extern NSString *kUIButtonBarButtonSelectedInfo;
+extern NSString *kUIButtonBarButtonStyle;
+extern NSString *kUIButtonBarButtonTag;
+extern NSString *kUIButtonBarButtonTarget;
+extern NSString *kUIButtonBarButtonTitle;
+extern NSString *kUIButtonBarButtonTitleVerticalHeight;
+extern NSString *kUIButtonBarButtonTitleWidth;
+extern NSString *kUIButtonBarButtonType;

@@ -1,5 +1,4 @@
 CC=/usr/local/bin/arm-apple-darwin-gcc
-CXX=/usr/local/bin/arm-apple-darwin-g++
 
 LD=$(CC)
 LDFLAGS = -framework CoreFoundation \
@@ -11,14 +10,14 @@ LDFLAGS = -framework CoreFoundation \
           -framework CoreSurface \
           -lobjc
 
-all:	iMPDclient
+all:	impdclient
 
-iMPDclient:	main.o application.o
+impdclient:	main.o application.o
 	$(LD) $(LDFLAGS) libmpd.a -o $@ $^
 
 %.o:	%.m
 		$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 clean:
-		rm -f *.o Hello
+		rm -f *.o *~ impdclient
 

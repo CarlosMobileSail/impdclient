@@ -104,6 +104,21 @@ void status_changed(MpdObj *mi, ChangedStatusType what)
 
 @implementation MPDClientApplication
 
+
+- (void)applicationWillTerminate:(NSNotification *)notification
+{
+//    [scanner dealloc];
+//    [settingsView saveSettings];
+    [self terminateWithSuccess];
+}
+
+
+- (void)cleanUp
+{
+    NSLog(@"cleanUP");
+    [self applicationWillTerminate:nil];
+}
+
 - (void)fill_playlist
 {
 	MpdObj *obj = NULL;
@@ -132,7 +147,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what)
 					[song setObject:[NSString stringWithFormat: @"%s, %s", data->song->artist, data->song->album] forKey:@"ARTIST"];
 					[song autorelease];
 					// Add the song object to the array.
-					[songs addObject:song];
+					[m_songs addObject:song];
 				}
 				// Go to the next entry.
 				data = mpd_data_get_next(data);
@@ -144,6 +159,113 @@ void status_changed(MpdObj *mi, ChangedStatusType what)
 }
 
 
+- (NSArray *)buttonBarItems 
+{
+  NSLog(@"buttonBarItems");
+  return [ NSArray arrayWithObjects:
+    [ NSDictionary dictionaryWithObjectsAndKeys:
+           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
+           @"play.png", kUIButtonBarButtonInfo,
+           @"playselected.png", kUIButtonBarButtonSelectedInfo,
+           [ NSNumber numberWithInt: 1], kUIButtonBarButtonTag,
+           self, kUIButtonBarButtonTarget,
+           NSLocalizedString(@"Play", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"0", kUIButtonBarButtonType,
+           nil 
+           ],
+    [ NSDictionary dictionaryWithObjectsAndKeys:
+           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
+           @"previous.png", kUIButtonBarButtonInfo,
+           @"previousselected.png", kUIButtonBarButtonSelectedInfo,
+           [ NSNumber numberWithInt: 2], kUIButtonBarButtonTag,
+           self, kUIButtonBarButtonTarget,
+           NSLocalizedString(@"Previous", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"0", kUIButtonBarButtonType,
+           nil 
+           ],
+    [ NSDictionary dictionaryWithObjectsAndKeys:
+           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
+           @"next.png", kUIButtonBarButtonInfo,
+           @"nextselected.png", kUIButtonBarButtonSelectedInfo,
+           [ NSNumber numberWithInt: 3], kUIButtonBarButtonTag,
+           self, kUIButtonBarButtonTarget,
+           NSLocalizedString(@"Next", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"0", kUIButtonBarButtonType,
+           nil 
+           ],
+    [ NSDictionary dictionaryWithObjectsAndKeys:
+           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
+           @"stop.png", kUIButtonBarButtonInfo,
+           @"stopselected.png", kUIButtonBarButtonSelectedInfo,
+           [ NSNumber numberWithInt: 4], kUIButtonBarButtonTag,
+           self, kUIButtonBarButtonTarget,
+           NSLocalizedString(@"Stop", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"0", kUIButtonBarButtonType,
+           nil 
+           ],         
+    [ NSDictionary dictionaryWithObjectsAndKeys:
+           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
+           @"volume.png", kUIButtonBarButtonInfo,
+           @"volumeselected.png", kUIButtonBarButtonSelectedInfo,
+           [ NSNumber numberWithInt: 5], kUIButtonBarButtonTag,
+           self, kUIButtonBarButtonTarget,
+           NSLocalizedString(@"Volume", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"0", kUIButtonBarButtonType,
+           nil 
+           ],         
+    nil
+  ];
+}
+
+
+- (void)buttonBarItemTapped:(id) sender 
+{
+  NSLog(@"buttonBarItemTapped");
+  int button = [ sender tag ];
+  if (button != m_currentView) {
+    m_currentView = button;    
+    switch (button) {
+      case 1:
+        NSLog(@"Play");
+        break;
+      case 2:
+        NSLog(@"Previous");
+        break;
+      case 3:
+        NSLog(@"Next");
+//        [_transition transition:UITransitionShiftImmediate toView:_phoneView];
+        break;
+      case 4:
+        NSLog(@"Stop");
+//        [_transition transition:UITransitionShiftImmediate toView:_contactView];
+        break;        
+      case 5:
+        NSLog(@"Volume");
+        break;
+    }
+  }
+}
+
+
+- (UIButtonBar *)createButtonBar 
+{
+	NSLog(@"createButtonBar");
+	UIButtonBar *buttonBar;
+	buttonBar = [ [ UIButtonBar alloc ] 
+		initInView: m_mainView
+		withFrame: CGRectMake(0.0f, 410.0f, 320.0f, 50.0f)
+		withItemList: [ self buttonBarItems ] ];
+	[buttonBar setDelegate:self];
+	[buttonBar setBarStyle:1];
+	[buttonBar setButtonBarTrackingMode: 2];
+
+	int buttons[5] = { 1, 2, 3, 4, 5};
+	[buttonBar registerButtonGroup:0 withButtons:buttons withCount: 5];
+	[buttonBar showButtonGroup: 0 withDuration: 0.0f];
+	return buttonBar;
+}
+
+
 - (void) applicationDidFinishLaunching: (id) unused
 {
     UIWindow *window;
@@ -151,12 +273,12 @@ void status_changed(MpdObj *mi, ChangedStatusType what)
     window = [[UIWindow alloc] initWithContentRect: [UIHardware fullScreenApplicationContentRect]];
 
 	// Create the storage array for the songs.
-	songs = [[NSMutableArray alloc] init];
+	m_songs = [[NSMutableArray alloc] init];
 	// Open the current playlist.
 	[self fill_playlist];
 	
     UITable *table = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f,
-																320.0f, 480.0f - 16.0f - 32.0f)];
+																320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
 	[table setRowHeight:56.0f];
     UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"HelloApp"
 												   identifier: @"hello" width: 320.0f];
@@ -179,23 +301,35 @@ void status_changed(MpdObj *mi, ChangedStatusType what)
 	
     struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
     rect.origin.x = rect.origin.y = 0.0f;
-    mainView = [[UIView alloc] initWithFrame: rect];
-    [mainView addSubview: nav]; 
-    [mainView addSubview: table]; 
+    m_mainView = [[UIView alloc] initWithFrame: rect];
+    [m_mainView addSubview: nav]; 
+    [m_mainView addSubview: table]; 
 
-    [window setContentView: mainView];
+    m_buttonBar = [ self createButtonBar ];
+    [m_mainView addSubview: m_buttonBar];
+
+    [window setContentView: m_mainView];
 }
 
 //  --- DELEGATE METHODS -----------------------------------------------
 
+- (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button
+{
+    NSLog(@"Button pressed: %d", button);
+    if (button == 0)
+		[self cleanUp];
+//    else
+//		[self showSettingsView];
+}
+
 - (int) numberOfRowsInTable: (UITable *)table
 {
-    return [songs count];
+    return [m_songs count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-    SongTableCell *cell = [[SongTableCell alloc] initWithSong: [songs objectAtIndex: row]];
+    SongTableCell *cell = [[SongTableCell alloc] initWithSong: [m_songs objectAtIndex: row]];
     return cell;
 }
 
