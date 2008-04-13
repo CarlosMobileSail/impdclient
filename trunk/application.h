@@ -28,8 +28,11 @@
 #import <UIKit/UITextLabel.h>
 #import <UIKit/UITableCell.h>
 
+#include "libmpd/libmpd.h"
 
-@interface SongTableCell : UITableCell {
+
+@interface SongTableCell : UITableCell
+{
     UITextLabel *song_name;
     UITextLabel *artist_name;
 }
@@ -37,17 +40,25 @@
 @end
 
 
-@interface MPDClientApplication :  UIApplication {
-   UIView       *m_mainView;
-   UITextView   *m_textView;
+@interface MPDClientApplication :  UIApplication
+{
+   UIView*		m_pMainView;
+   UITextView*  m_pTextView;
+   UINavigationItem* m_pTitle;
    
-   UIButtonBar  *m_buttonBar;
-   int          m_currentView;
+   UIButtonBar* m_pButtonBar;
 
-   NSMutableArray *m_songs;
+   MpdObj* m_pMPD;
+   NSMutableArray* m_pSongs;
+   NSTimer* m_pTimer;
+   UITable* m_pTable;
 }
+- (void)open_connection;
 - (void)fill_playlist;
 - (void)cleanUp;
+- (void) UpdateTitle;
+- (void) UpdateButtonBar;
+- (id) timertick: (NSTimer *)timer;
 @end
 
 extern NSString *kUIButtonBarButtonAction;
