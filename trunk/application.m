@@ -62,7 +62,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		[pApp UpdateTitle];
 		bHandled = TRUE;
 	}
-	if (what & MPD_CST_PLAYLIST) {
+	if ((what & MPD_CST_PLAYLIST) || (what & MPD_CST_SONGID)) {
 		// The playlist has changed.
 		[pApp fill_playlist];		
 		bHandled = TRUE;
@@ -81,11 +81,13 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (id) initWithSong: (NSDictionary *)song
 {
 	self = [super init];
-	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(9.0f, 3.0f, 260.0f, 29.0f)];
-	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(10.0f, 22.0f, 260.0f, 34.0f)];
-	
+	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(34.0f, 3.0f, 260.0f, 29.0f)];
+	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(35.0f, 28.0f, 260.0f, 20.0f)];
+	play_image = [[UIImageView alloc] initWithFrame: CGRectMake(10.0f, 17.0f, 16.0f, 16.0f)]; 
+		
 	float c[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float h[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	float b[] = { 0.663f, 0.0f, 0.031f, 1.0f };		// Opaque red.
 	
 	[song_name setText: [song objectForKey: @"SONG"]];
 	[song_name setFont: [UIImageAndTextTableCell defaultTitleFont]];
@@ -97,13 +99,13 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	[artist_name setColor: CGColorCreateCopyWithAlpha([artist_name color], 0.4f)];
 	[artist_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
 	[artist_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
-	
+
+	if ([song objectForKey: @"CURRENT"] == @"1")
+		[play_image setImage:[UIImage applicationImageNamed:@"resources/play_small.png"]];
+
 	[self addSubview: artist_name];
 	[self addSubview: song_name];
-	
-//	[self setShowDisclosure: YES];
-//	[self setDisclosureStyle: 2];
-	
+	[self addSubview: play_image];
 	return self;
 }
 
@@ -111,6 +113,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 {
     [song_name setHighlighted: selected];
     [artist_name setHighlighted: selected];
+    [play_image setHighlighted: selected];
     
     [super drawContentInRect: rect selected: selected];
 }
@@ -165,6 +168,11 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		return;
 	// Clear the songs array.
 	[m_pSongs removeAllObjects];
+	// Get the current song id, if any.
+	int current_id = -1;
+	mpd_Song* pSong = mpd_playlist_get_current_song(m_pMPD);
+	if (pSong)
+		current_id = pSong->id;
 	// Get the current playlist.
 	MpdData *data = mpd_playlist_get_changes(m_pMPD, -1);
 	if (data) {
@@ -175,6 +183,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 				NSMutableDictionary* song = [[NSMutableDictionary alloc] init];
 				[song setObject:[NSString stringWithCString: data->song->title] forKey:@"SONG"];
 				[song setObject:[NSString stringWithFormat: @"%s, %s", data->song->artist, data->song->album] forKey:@"ARTIST"];
+				[song setObject:(current_id == data->song->id ? @"1" : @"0") forKey:@"CURRENT"];
 				[song autorelease];
 				// Add the song object to the array.
 				[m_pSongs addObject:song];
@@ -191,58 +200,58 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (NSArray *)buttonBarItems 
 {
 	BOOL bIsPlaying = (mpd_player_get_state(m_pMPD) == MPD_PLAYER_PLAY);
-  NSLog(@"buttonBarItems");
-  return [ NSArray arrayWithObjects:
+	NSLog(@"buttonBarItems");
+	return [ NSArray arrayWithObjects:
     [ NSDictionary dictionaryWithObjectsAndKeys:
            @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           bIsPlaying ? @"pause.png" : @"play.png", kUIButtonBarButtonInfo,
-           @"playselected.png", kUIButtonBarButtonSelectedInfo,
+           bIsPlaying ? @"resources/pause.png" : @"resources/play.png", kUIButtonBarButtonInfo,
+           @"resources/play.png", kUIButtonBarButtonSelectedInfo,
            [ NSNumber numberWithInt: 1], kUIButtonBarButtonTag,
            self, kUIButtonBarButtonTarget,
-           NSLocalizedString(bIsPlaying ? @"Pause" : @"Play", @"Siphon view"), kUIButtonBarButtonTitle,
+           (bIsPlaying ? @"Pause" : @"Play"), kUIButtonBarButtonTitle,
            @"0", kUIButtonBarButtonType,
            nil 
            ],
     [ NSDictionary dictionaryWithObjectsAndKeys:
            @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"previous.png", kUIButtonBarButtonInfo,
-           @"previousselected.png", kUIButtonBarButtonSelectedInfo,
+           @"resources/previous.png", kUIButtonBarButtonInfo,
+           @"resources/previous.png", kUIButtonBarButtonSelectedInfo,
            [ NSNumber numberWithInt: 2], kUIButtonBarButtonTag,
            self, kUIButtonBarButtonTarget,
-           NSLocalizedString(@"Previous", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"Previous", kUIButtonBarButtonTitle,
            @"0", kUIButtonBarButtonType,
            nil 
            ],
     [ NSDictionary dictionaryWithObjectsAndKeys:
            @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"next.png", kUIButtonBarButtonInfo,
-           @"nextselected.png", kUIButtonBarButtonSelectedInfo,
+           @"resources/next.png", kUIButtonBarButtonInfo,
+           @"resources/next.png", kUIButtonBarButtonSelectedInfo,
            [ NSNumber numberWithInt: 3], kUIButtonBarButtonTag,
            self, kUIButtonBarButtonTarget,
-           NSLocalizedString(@"Next", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"Next", kUIButtonBarButtonTitle,
            @"0", kUIButtonBarButtonType,
            nil 
            ],
     [ NSDictionary dictionaryWithObjectsAndKeys:
            @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"stop.png", kUIButtonBarButtonInfo,
-           @"stopselected.png", kUIButtonBarButtonSelectedInfo,
+           @"resources/stop.png", kUIButtonBarButtonInfo,
+           @"resources/stop.png", kUIButtonBarButtonSelectedInfo,
            [ NSNumber numberWithInt: 4], kUIButtonBarButtonTag,
            self, kUIButtonBarButtonTarget,
-           NSLocalizedString(@"Stop", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"Stop", kUIButtonBarButtonTitle,
            @"0", kUIButtonBarButtonType,
            nil 
-           ],         
+           ],
     [ NSDictionary dictionaryWithObjectsAndKeys:
            @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"volume.png", kUIButtonBarButtonInfo,
-           @"volumeselected.png", kUIButtonBarButtonSelectedInfo,
+           @"resources/volume.png", kUIButtonBarButtonInfo,
+           @"resources/volume.png", kUIButtonBarButtonSelectedInfo,
            [ NSNumber numberWithInt: 5], kUIButtonBarButtonTag,
            self, kUIButtonBarButtonTarget,
-           NSLocalizedString(@"Volume", @"Siphon view"), kUIButtonBarButtonTitle,
+           @"Volume", kUIButtonBarButtonTitle,
            @"0", kUIButtonBarButtonType,
            nil 
-           ],         
+           ],
     nil
   ];
 }
@@ -303,7 +312,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	int tagNumber = 1;
 	BOOL bIsPlaying = (mpd_player_get_state(m_pMPD) == MPD_PLAYER_PLAY);
 	NSLog(@"Updating button: %d", bIsPlaying);
-	UIImage *image = [UIImage applicationImageNamed: (bIsPlaying ? @"pause.png" : @"play.png")];
+	UIImage *image = [UIImage applicationImageNamed: (bIsPlaying ? @"resources/pause.png" : @"resources/play.png")];
 	[ [ m_pButtonBar viewWithTag:tagNumber ]  setImage:image];
 }
 
@@ -328,28 +337,35 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 {
     UIWindow *window;
 	BOOL i = TRUE;
-    window = [[UIWindow alloc] initWithContentRect: [UIHardware fullScreenApplicationContentRect]];
 
 	// Create the storage array for the songs.
 	m_pMPD = NULL;
 	m_pSongs = [[NSMutableArray alloc] init];
 	
-    m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
-	[m_pTable setRowHeight:56.0f];
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient"
-												   identifier: @"column1" width: 320.0f];
-	
+    struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
+    rect.origin.x = rect.origin.y = 0.0f;
+    window = [[UIWindow alloc] initWithContentRect: rect];
+    m_pMainView = [[UIView alloc] initWithFrame: rect];
     [window orderFront: self];
     [window makeKey: self];
     [window _setHidden: NO];
-	
+    [window setContentView: m_pMainView];
+
+    // Create the table.
+    m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
+    [m_pMainView addSubview: m_pTable]; 
+
+    [m_pTable setRowHeight:56.0f];
+    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient"
+												   identifier: @"column1" width: 320.0f];
     [m_pTable addTableColumn: col]; 
     [m_pTable setDataSource: self];
     [m_pTable setDelegate: self];
-	
-    UINavigationBar *nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-    [nav showLeftButton:@"Settings"	withStyle:2	// left arrow
-		rightButton:@"Exit"	withStyle:3];	// brighter blue
+	[m_pTable setAllowsReordering:YES];
+
+    // Create the navigation bar.
+	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
+    [nav showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
     [nav setBarStyle: 1];	// Dark style.
     [nav setDelegate:self];
     [nav enableAnimation];
@@ -357,15 +373,11 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
 	[nav pushNavigationItem: m_pTitle];
 	
-    struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
-    rect.origin.x = rect.origin.y = 0.0f;
-    m_pMainView = [[UIView alloc] initWithFrame: rect];
     [m_pMainView addSubview: nav]; 
-    [m_pMainView addSubview: m_pTable]; 
 
+    // Create the button bar.
     m_pButtonBar = [ self createButtonBar ];
     [m_pMainView addSubview: m_pButtonBar];
-    [window setContentView: m_pMainView];
 
     // Create a timer (every 0.2 seconds).
 	double tickIntervalM = 0.2;
@@ -376,7 +388,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
                 repeats: YES];
     
 	// Open the current playlist.
-    [self open_connection];
+	[self open_connection];
 	[self fill_playlist];
 }
 
@@ -387,8 +399,16 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
     NSLog(@"Button pressed: %d", button);
     if (button == 0)
 		[self cleanUp];
-//    else
-//		[self showSettingsView];
+    else if (button == 1) {
+    	if (m_Editing) {
+			[m_pTable enableRowDeletion:YES animated:YES];
+			[navbar showLeftButton:@"Done" withStyle:0 rightButton:@"Exit" withStyle:3];
+    	} else {
+    		[m_pTable enableRowDeletion:NO animated:YES];
+    		[navbar showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];
+    	}
+    	m_Editing = !m_Editing;
+    }
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
@@ -402,10 +422,34 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
     return cell;
 }
 
-- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
+- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 
     reusing: (BOOL) reusing
 {
     return [self table: table cellForRow: row column: col];
+}
+
+- (BOOL)table:(UITable*)table canDeleteRow: (int)row
+{
+	return YES;
+}
+
+- (void)table:(UITable*)table deleteRow: (int)row
+{
+	NSLog(@"table:deleteRow: %d", row);
+   	// Remove the song from the playlist.
+	mpd_playlist_delete_pos(m_pMPD, row);
+}
+
+- (BOOL)table:(UITable*)table canMoveRow: (int)row
+{
+	return (row == 0) ? NO : YES;
+}
+
+-(int)table:(UITable*)table movedRow: (int)row toRow: (int)dest
+{
+	NSLog(@"table:movedRow:toRow: %i, %i", row, dest);
+	mpd_playlist_move_pos(m_pMPD, row, dest);
+	return dest;
 }
 
 @end

@@ -35,6 +35,7 @@
 {
     UITextLabel *song_name;
     UITextLabel *artist_name;
+    UIImageView* play_image;
 }
 - (id) initWithSong: (NSDictionary *)song;
 @end
@@ -47,6 +48,7 @@
    UINavigationItem* m_pTitle;
    
    UIButtonBar* m_pButtonBar;
+   BOOL m_Editing;
 
    MpdObj* m_pMPD;
    NSMutableArray* m_pSongs;
