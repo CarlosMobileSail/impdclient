@@ -362,6 +362,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
     [m_pTable setDataSource: self];
     [m_pTable setDelegate: self];
 	[m_pTable setAllowsReordering:YES];
+	[m_pTable setSeparatorStyle:1];
 
     // Create the navigation bar.
 	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
