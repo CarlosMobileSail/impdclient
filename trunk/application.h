@@ -49,18 +49,18 @@
    
    UIButtonBar* m_pButtonBar;
    BOOL m_Editing;
+   BOOL m_ShowPlaylist;
 
    MpdObj* m_pMPD;
    NSMutableArray* m_pSongs;
    NSTimer* m_pTimer;
    UITable* m_pTable;
 }
-- (void)open_connection;
-- (void)fill_playlist;
 - (void)cleanUp;
-- (void) UpdateTitle;
-- (void) UpdateButtonBar;
-- (id) timertick: (NSTimer *)timer;
+- (void)show_playlist;
+- (void)UpdateTitle;
+- (void)UpdateButtonBar;
+- (id)timertick: (NSTimer *)timer;
 @end
 
 extern NSString *kUIButtonBarButtonAction;

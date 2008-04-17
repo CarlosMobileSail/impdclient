@@ -64,7 +64,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	}
 	if ((what & MPD_CST_PLAYLIST) || (what & MPD_CST_SONGID)) {
 		// The playlist has changed.
-		[pApp fill_playlist];		
+		[pApp show_playlist];		
 		bHandled = TRUE;
 	}
 	if (!bHandled)
@@ -162,7 +162,36 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 }
 
 
-- (void)fill_playlist
+- (void)show_artists
+{
+	if (!m_pMPD)
+		return;
+	// Clear the songs array.
+	[m_pSongs removeAllObjects];
+	// Get the list of artists.
+	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_ARTIST);
+	MpdData *data = mpd_database_search_commit(m_pMPD);
+	if (data) {
+		do {
+			if (data->type == MPD_DATA_TYPE_TAG) {
+				// Create song object.
+				NSMutableDictionary* song = [[NSMutableDictionary alloc] init];
+				[song setObject:[NSString stringWithCString: data->tag] forKey:@"SONG"];
+				[song autorelease];
+				// Add the song object to the array.
+				[m_pSongs addObject:song];
+			}
+			// Go to the next entry.
+			data = mpd_data_get_next(data);
+		} while(data);
+	} else
+		NSLog(@"No data found");
+	// Update the table contents.
+    [m_pTable reloadData];
+}
+
+
+- (void)show_playlist
 {
 	if (!m_pMPD)
 		return;
@@ -176,7 +205,6 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	// Get the current playlist.
 	MpdData *data = mpd_playlist_get_changes(m_pMPD, -1);
 	if (data) {
-		int cnt = 0;
 		do {
 			if (data->type == MPD_DATA_TYPE_SONG) {
 				// Create song object.
@@ -191,7 +219,8 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 			// Go to the next entry.
 			data = mpd_data_get_next(data);
 		} while(data);
-	}
+	} else
+		NSLog(@"No data found");
 	// Update the table contents.
     [m_pTable reloadData];
 }
@@ -234,21 +263,21 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
            ],
     [ NSDictionary dictionaryWithObjectsAndKeys:
            @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"resources/stop.png", kUIButtonBarButtonInfo,
-           @"resources/stop.png", kUIButtonBarButtonSelectedInfo,
+           @"resources/volume.png", kUIButtonBarButtonInfo,
+           @"resources/volume.png", kUIButtonBarButtonSelectedInfo,
            [ NSNumber numberWithInt: 4], kUIButtonBarButtonTag,
            self, kUIButtonBarButtonTarget,
-           @"Stop", kUIButtonBarButtonTitle,
+           @"Volume", kUIButtonBarButtonTitle,
            @"0", kUIButtonBarButtonType,
            nil 
            ],
     [ NSDictionary dictionaryWithObjectsAndKeys:
            @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"resources/volume.png", kUIButtonBarButtonInfo,
-           @"resources/volume.png", kUIButtonBarButtonSelectedInfo,
+           @"resources/music_add.png", kUIButtonBarButtonInfo,
+           @"resources/music_add.png", kUIButtonBarButtonSelectedInfo,
            [ NSNumber numberWithInt: 5], kUIButtonBarButtonTag,
            self, kUIButtonBarButtonTarget,
-           @"Volume", kUIButtonBarButtonTitle,
+           @"Add", kUIButtonBarButtonTitle,
            @"0", kUIButtonBarButtonType,
            nil 
            ],
@@ -278,11 +307,15 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		mpd_player_next(m_pMPD);
 		break;
 	case 4:
-		NSLog(@"Stop");
-		mpd_player_stop(m_pMPD);
+		NSLog(@"Volume");
 		break;        
 	case 5:
-		NSLog(@"Volume");
+		NSLog(@"Add");
+		if (m_ShowPlaylist)
+			[self show_artists];
+		else
+			[self show_playlist];
+		m_ShowPlaylist = !m_ShowPlaylist;
 		break;
 	}
 }
@@ -341,6 +374,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	// Create the storage array for the songs.
 	m_pMPD = NULL;
 	m_pSongs = [[NSMutableArray alloc] init];
+	m_ShowPlaylist = TRUE;
 	
     struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
     rect.origin.x = rect.origin.y = 0.0f;
@@ -388,9 +422,8 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
                 userInfo: nil
                 repeats: YES];
     
-	// Open the current playlist.
+	// Open a connection to the server.
 	[self open_connection];
-	[self fill_playlist];
 }
 
 //  --- DELEGATE METHODS -----------------------------------------------
