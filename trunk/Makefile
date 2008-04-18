@@ -1,4 +1,5 @@
 CC=/usr/local/bin/arm-apple-darwin-gcc
+CFLAGS=-Wall
 
 LD=$(CC)
 LDFLAGS = -framework CoreFoundation \
@@ -12,7 +13,7 @@ LDFLAGS = -framework CoreFoundation \
 
 all:	impdclient
 
-impdclient:	main.o application.o
+impdclient:	main.o application.o SongsView.o ArtistsView.o
 	$(LD) $(LDFLAGS) libmpd.a -o $@ $^
 
 %.o:	%.m

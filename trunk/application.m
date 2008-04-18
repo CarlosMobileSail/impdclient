@@ -23,19 +23,13 @@
  
 #import <CoreFoundation/CoreFoundation.h>
 #import <Foundation/Foundation.h>
-#import <UIKit/CDStructures.h>
-#import <UIKit/UIPushButton.h>
-#import <UIKit/UIThreePartButton.h>
 #import <UIKit/UINavigationBar.h>
 #import <UIKit/UIWindow.h>
-#import <UIKit/UIView-Hierarchy.h>
 #import <UIKit/UIHardware.h>
-#import <UIKit/UIDateLabel.h>
-#import <UIKit/UITable.h>
-#import <UIKit/UITableCell.h>
-#import <UIKit/UITableColumn.h>
-#import "application.h"
 
+#import "application.h"
+#import "SongsView.h"
+#import "ArtistsView.h"
 
 //////////////////////////////////////////////////////////////////////////
 // MPD: callback functions.
@@ -64,68 +58,18 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	}
 	if ((what & MPD_CST_PLAYLIST) || (what & MPD_CST_SONGID)) {
 		// The playlist has changed.
-		[pApp show_playlist];		
+		[pApp ShowPlaylist];
 		bHandled = TRUE;
 	}
 	if (!bHandled)
 		NSLog(@"Status changed: 0x%08X", (int)what);
 }
 
-
-//////////////////////////////////////////////////////////////////////////
-// DetailsCell: implementation.
-//////////////////////////////////////////////////////////////////////////
-
-@implementation SongTableCell
-
-- (id) initWithSong: (NSDictionary *)song
-{
-	self = [super init];
-	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(34.0f, 3.0f, 260.0f, 29.0f)];
-	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(35.0f, 28.0f, 260.0f, 20.0f)];
-	play_image = [[UIImageView alloc] initWithFrame: CGRectMake(10.0f, 17.0f, 16.0f, 16.0f)]; 
-		
-	float c[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	float h[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	float b[] = { 0.663f, 0.0f, 0.031f, 1.0f };		// Opaque red.
-	
-	[song_name setText: [song objectForKey: @"SONG"]];
-	[song_name setFont: [UIImageAndTextTableCell defaultTitleFont]];
-	[song_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[song_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
-	
-	[artist_name setText: [song objectForKey: @"ARTIST"]];
-	[artist_name setFont: [UIDateLabel defaultFont]];
-	[artist_name setColor: CGColorCreateCopyWithAlpha([artist_name color], 0.4f)];
-	[artist_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[artist_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
-
-	if ([song objectForKey: @"CURRENT"] == @"1")
-		[play_image setImage:[UIImage applicationImageNamed:@"resources/play_small.png"]];
-
-	[self addSubview: artist_name];
-	[self addSubview: song_name];
-	[self addSubview: play_image];
-	return self;
-}
-
-- (void) drawContentInRect: (struct CGRect)rect selected: (BOOL) selected
-{
-    [song_name setHighlighted: selected];
-    [artist_name setHighlighted: selected];
-    [play_image setHighlighted: selected];
-    
-    [super drawContentInRect: rect selected: selected];
-}
-
-@end
-
 //////////////////////////////////////////////////////////////////////////
 // Application: implementation.
 //////////////////////////////////////////////////////////////////////////
 
 @implementation MPDClientApplication
-
 
 - (void)applicationWillTerminate:(NSNotification *)notification
 {
@@ -159,70 +103,6 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		mpd_free(m_pMPD);
 		m_pMPD = NULL;
 	}
-}
-
-
-- (void)show_artists
-{
-	if (!m_pMPD)
-		return;
-	// Clear the songs array.
-	[m_pSongs removeAllObjects];
-	// Get the list of artists.
-	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_ARTIST);
-	MpdData *data = mpd_database_search_commit(m_pMPD);
-	if (data) {
-		do {
-			if (data->type == MPD_DATA_TYPE_TAG) {
-				// Create song object.
-				NSMutableDictionary* song = [[NSMutableDictionary alloc] init];
-				[song setObject:[NSString stringWithCString: data->tag] forKey:@"SONG"];
-				[song autorelease];
-				// Add the song object to the array.
-				[m_pSongs addObject:song];
-			}
-			// Go to the next entry.
-			data = mpd_data_get_next(data);
-		} while(data);
-	} else
-		NSLog(@"No data found");
-	// Update the table contents.
-    [m_pTable reloadData];
-}
-
-
-- (void)show_playlist
-{
-	if (!m_pMPD)
-		return;
-	// Clear the songs array.
-	[m_pSongs removeAllObjects];
-	// Get the current song id, if any.
-	int current_id = -1;
-	mpd_Song* pSong = mpd_playlist_get_current_song(m_pMPD);
-	if (pSong)
-		current_id = pSong->id;
-	// Get the current playlist.
-	MpdData *data = mpd_playlist_get_changes(m_pMPD, -1);
-	if (data) {
-		do {
-			if (data->type == MPD_DATA_TYPE_SONG) {
-				// Create song object.
-				NSMutableDictionary* song = [[NSMutableDictionary alloc] init];
-				[song setObject:[NSString stringWithCString: data->song->title] forKey:@"SONG"];
-				[song setObject:[NSString stringWithFormat: @"%s, %s", data->song->artist, data->song->album] forKey:@"ARTIST"];
-				[song setObject:(current_id == data->song->id ? @"1" : @"0") forKey:@"CURRENT"];
-				[song autorelease];
-				// Add the song object to the array.
-				[m_pSongs addObject:song];
-			}
-			// Go to the next entry.
-			data = mpd_data_get_next(data);
-		} while(data);
-	} else
-		NSLog(@"No data found");
-	// Update the table contents.
-    [m_pTable reloadData];
 }
 
 
@@ -312,10 +192,9 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	case 5:
 		NSLog(@"Add");
 		if (m_ShowPlaylist)
-			[self show_artists];
+			[self showArtistsViewWithTransition:1];
 		else
-			[self show_playlist];
-		m_ShowPlaylist = !m_ShowPlaylist;
+			[self showSongsViewWithTransition:2];
 		break;
 	}
 }
@@ -340,7 +219,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 }
 
 
-- (void) UpdateButtonBar
+- (void)UpdateButtonBar
 {
 	int tagNumber = 1;
 	BOOL bIsPlaying = (mpd_player_get_state(m_pMPD) == MPD_PLAYER_PLAY);
@@ -350,73 +229,60 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 }
 
 
-- (void) UpdateTitle
+- (void)UpdateTitle
 {
-	int totalTime = mpd_status_get_total_song_time(m_pMPD);
-	int elapsedTime = mpd_status_get_elapsed_song_time(m_pMPD);
-	NSString* str = [NSString stringWithFormat:@"%d:%02d - %d:%02d", elapsedTime / 60, elapsedTime % 60, totalTime / 60, totalTime % 60];
-	[m_pTitle setTitle: str]; 
+	if (m_ShowPlaylist) {
+		if (m_pSongsView)
+			[m_pSongsView UpdateTitle];
+	} else {
+		if (m_pArtistsView)
+			[m_pArtistsView UpdateTitle];
+	}
 }
 
 
-- (id) timertick: (NSTimer *)timer
+- (void)ShowPlaylist
+{
+	if (m_pSongsView)
+		[m_pSongsView ShowPlaylist]; 
+}
+
+
+- (id)timertick: (NSTimer *)timer
 {
 	// Service the mpd status handler.
-	mpd_status_update(m_pMPD);
+	if (m_pMPD)
+		mpd_status_update(m_pMPD);
 }
 
 
-- (void) applicationDidFinishLaunching: (id) unused
+- (void)applicationDidFinishLaunching: (id) unused
 {
     UIWindow *window;
-	BOOL i = TRUE;
 
 	// Create the storage array for the songs.
 	m_pMPD = NULL;
-	m_pSongs = [[NSMutableArray alloc] init];
-	m_ShowPlaylist = TRUE;
+	m_pSongsView = NULL;
+	m_pArtistsView = NULL;
 	
     struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
     rect.origin.x = rect.origin.y = 0.0f;
     window = [[UIWindow alloc] initWithContentRect: rect];
-    m_pMainView = [[UIView alloc] initWithFrame: rect];
+    m_pTransitionView = [[UITransitionView alloc] initWithFrame:rect];
+    m_pMainView = [[UIView alloc] initWithFrame:rect];
     [window orderFront: self];
     [window makeKey: self];
     [window _setHidden: NO];
     [window setContentView: m_pMainView];
-
-    // Create the table.
-    m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
-    [m_pMainView addSubview: m_pTable]; 
-
-    [m_pTable setRowHeight:56.0f];
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient"
-												   identifier: @"column1" width: 320.0f];
-    [m_pTable addTableColumn: col]; 
-    [m_pTable setDataSource: self];
-    [m_pTable setDelegate: self];
-	[m_pTable setAllowsReordering:YES];
-	[m_pTable setSeparatorStyle:1];
-
-    // Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-    [nav showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
-    [nav setBarStyle: 1];	// Dark style.
-    [nav setDelegate:self];
-    [nav enableAnimation];
-
-	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
-	[nav pushNavigationItem: m_pTitle];
-	
-    [m_pMainView addSubview: nav]; 
+    [m_pMainView addSubview:m_pTransitionView];
 
     // Create the button bar.
     m_pButtonBar = [ self createButtonBar ];
     [m_pMainView addSubview: m_pButtonBar];
-
+    
     // Create a timer (every 0.2 seconds).
 	double tickIntervalM = 0.2;
-    m_pTimer = [NSTimer scheduledTimerWithTimeInterval: tickIntervalM
+	m_pTimer = [NSTimer scheduledTimerWithTimeInterval: tickIntervalM
                 target: self
                 selector: @selector(timertick:)
                 userInfo: nil
@@ -424,66 +290,35 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
     
 	// Open a connection to the server.
 	[self open_connection];
+    // Show the songs view.
+	[self showSongsViewWithTransition:1];
 }
 
-//  --- DELEGATE METHODS -----------------------------------------------
 
-- (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button
+- (void)showSongsViewWithTransition:(int)trans
 {
-    NSLog(@"Button pressed: %d", button);
-    if (button == 0)
-		[self cleanUp];
-    else if (button == 1) {
-    	if (m_Editing) {
-			[m_pTable enableRowDeletion:YES animated:YES];
-			[navbar showLeftButton:@"Done" withStyle:0 rightButton:@"Exit" withStyle:3];
-    	} else {
-    		[m_pTable enableRowDeletion:NO animated:YES];
-    		[navbar showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];
-    	}
-    	m_Editing = !m_Editing;
-    }
+	if (!m_pSongsView) {
+		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
+		rect.origin.x = rect.origin.y = 0.0f;
+		m_pSongsView = [[SongsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		[m_pSongsView Initialize:self mpd:m_pMPD];
+	}
+	m_ShowPlaylist = TRUE;
+	[m_pTransitionView transition:trans toView:m_pSongsView];
 }
 
-- (int) numberOfRowsInTable: (UITable *)table
-{
-    return [m_pSongs count];
-}
 
-- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
+- (void)showArtistsViewWithTransition:(int)trans
 {
-    SongTableCell *cell = [[SongTableCell alloc] initWithSong: [m_pSongs objectAtIndex: row]];
-    return cell;
-}
-
-- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 
-    reusing: (BOOL) reusing
-{
-    return [self table: table cellForRow: row column: col];
-}
-
-- (BOOL)table:(UITable*)table canDeleteRow: (int)row
-{
-	return YES;
-}
-
-- (void)table:(UITable*)table deleteRow: (int)row
-{
-	NSLog(@"table:deleteRow: %d", row);
-   	// Remove the song from the playlist.
-	mpd_playlist_delete_pos(m_pMPD, row);
-}
-
-- (BOOL)table:(UITable*)table canMoveRow: (int)row
-{
-	return (row == 0) ? NO : YES;
-}
-
--(int)table:(UITable*)table movedRow: (int)row toRow: (int)dest
-{
-	NSLog(@"table:movedRow:toRow: %i, %i", row, dest);
-	mpd_playlist_move_pos(m_pMPD, row, dest);
-	return dest;
+	if (!m_pArtistsView) {
+		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
+		rect.origin.x = rect.origin.y = 0.0f;
+		m_pArtistsView = [[ArtistsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		[m_pArtistsView Initialize:self mpd:m_pMPD];
+	}
+	m_ShowPlaylist = FALSE;
+	[m_pArtistsView ShowArtists];
+	[m_pTransitionView transition:trans toView:m_pArtistsView];
 }
 
 @end

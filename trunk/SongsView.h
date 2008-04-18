@@ -21,8 +21,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  *******************************************************************************/
 
+#import <Foundation/Foundation.h>
+#import <Foundation/NSDictionary.h>
 #import <UIKit/UIKit.h>
 #import <UIKit/UIApplication.h>
+#import <UIKit/UITextLabel.h>
+#import <UIKit/UITableCell.h>
 
 #import "libmpd/libmpd.h"
 
@@ -30,44 +34,41 @@
 // Forward declarations.
 //////////////////////////////////////////////////////////////////////////
 
-@class SongsView;
-@class ArtistsView;
+@class MPDClientApplication;
 
 //////////////////////////////////////////////////////////////////////////
-// MPDClientApplication: class definition.
+// SongTableCell: class definition.
 //////////////////////////////////////////////////////////////////////////
 
-@interface MPDClientApplication :  UIApplication
+@interface SongTableCell : UITableCell
 {
-   UIView* m_pMainView;
-   SongsView* m_pSongsView;
-   ArtistsView* m_pArtistsView;
-   UITransitionView *m_pTransitionView;
-   
-   UIButtonBar* m_pButtonBar;
-   BOOL m_ShowPlaylist;
-
-   MpdObj* m_pMPD;
-   NSTimer* m_pTimer;
+    UITextLabel *song_name;
+    UITextLabel *artist_name;
+    UIImageView* play_image;
 }
-- (void)cleanUp;
-- (void)UpdateTitle;
-- (void)ShowPlaylist;
-- (void)UpdateButtonBar;
-- (id)timertick: (NSTimer *)timer;
-
-- (void)showSongsViewWithTransition:(int)trans;
-- (void)showArtistsViewWithTransition:(int)trans;
+- (id) initWithSong: (NSDictionary *)song;
 @end
 
-extern NSString *kUIButtonBarButtonAction;
-extern NSString *kUIButtonBarButtonInfo;
-extern NSString *kUIButtonBarButtonInfoOffset;
-extern NSString *kUIButtonBarButtonSelectedInfo;
-extern NSString *kUIButtonBarButtonStyle;
-extern NSString *kUIButtonBarButtonTag;
-extern NSString *kUIButtonBarButtonTarget;
-extern NSString *kUIButtonBarButtonTitle;
-extern NSString *kUIButtonBarButtonTitleVerticalHeight;
-extern NSString *kUIButtonBarButtonTitleWidth;
-extern NSString *kUIButtonBarButtonType;
+
+//////////////////////////////////////////////////////////////////////////
+// SongsView: class definition.
+//////////////////////////////////////////////////////////////////////////
+
+@interface SongsView : UIView
+{
+	UINavigationBar* m_pNavigationBar;
+	UINavigationItem* m_pTitle;
+	BOOL m_Editing;
+
+	MpdObj* m_pMPD;
+	MPDClientApplication* m_pApp;
+	
+	NSMutableArray* m_pSongs;
+	UITable* m_pTable;
+}
+- (id)initWithFrame:(struct CGRect)frame;
+- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
+
+- (void)ShowPlaylist;
+- (void)UpdateTitle;
+@end
