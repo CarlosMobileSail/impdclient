@@ -32,39 +32,6 @@
 #import "application.h"
 
 //////////////////////////////////////////////////////////////////////////
-// ArtistTableCell: implementation.
-//////////////////////////////////////////////////////////////////////////
-
-@implementation ArtistTableCell
-
-- (id) initWithArtist: (NSDictionary *)artist
-{
-	self = [super init];
-	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(10.0f, 5.0f, 260.0f, 30.0f)];
-		
-	float c[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	float h[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	
-	[artist_name setText: [artist objectForKey: @"ARTIST"]];
-	[artist_name setFont: [UIImageAndTextTableCell defaultTitleFont]];
-	[artist_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[artist_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
-
-	[self addSubview: artist_name];
-	[self setShowDisclosure: YES];
-	[self setDisclosureStyle: 2];
-	return self;
-}
-
-- (void) drawContentInRect: (struct CGRect)rect selected: (BOOL) selected
-{
-    [artist_name setHighlighted: selected];
-    [super drawContentInRect: rect selected: selected];
-}
-
-@end
-
-//////////////////////////////////////////////////////////////////////////
 // ArtistsView: implementation.
 //////////////////////////////////////////////////////////////////////////
 
@@ -83,19 +50,24 @@
 	m_pApp = NULL;
 	m_pMPD = NULL;
 	
-	// Create the storage array for the songs.
+	// Create the storage arrays.
 	m_pArtists = [[NSMutableArray alloc] init];
-    // Create the table.
-    m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
-    [self addSubview: m_pTable]; 
-
-    [m_pTable setRowHeight:38.0f];
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient"
-												   identifier: @"column1" width: 320.0f];
+	m_pTableHeaders = [[NSMutableArray alloc] init];
+	
+	CGRect aRect = CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f);
+	// Create the section list.
+	m_pSectionList = [[UISectionList alloc] initWithFrame:aRect showSectionIndex:YES];
+	[m_pSectionList setDataSource:self];
+	[m_pSectionList reloadData];
+	[self addSubview:m_pSectionList];
+	
+    // Get the real table.
+    m_pTable = [m_pSectionList table];
+    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
     [m_pTable addTableColumn: col]; 
-    [m_pTable setDataSource: self];
     [m_pTable setDelegate: self];
 	[m_pTable setSeparatorStyle:1];
+    [m_pTable setRowHeight:42.0f];
 
     // Create the navigation bar.
 	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
@@ -117,20 +89,36 @@
 {
 	if (!m_pMPD)
 		return;
-	// Clear the songs array.
+	// Clear the arrays.
 	[m_pArtists removeAllObjects];
+	[m_pTableHeaders removeAllObjects];
 	// Get the list of artists.
 	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_ARTIST);
 	MpdData *data = mpd_database_search_commit(m_pMPD);
 	if (data) {
+		NSString* prevSection = @"";
+		int count = 0;
 		do {
 			if (data->type == MPD_DATA_TYPE_TAG) {
-				// Create song object.
-				NSMutableDictionary* artist = [[NSMutableDictionary alloc] init];
-				[artist setObject:[NSString stringWithCString: data->tag] forKey:@"ARTIST"];
-				[artist autorelease];
-				// Add the song object to the array.
-				[m_pArtists addObject:artist];
+				// Convert the name.
+				NSString* artistname = [NSString stringWithCString: data->tag];
+				// Determine the first letters for the section list.
+				NSString* firstletter = [artistname substringWithRange:NSMakeRange(0,1)];
+				if (![firstletter isEqual:prevSection]) {
+					prevSection = [firstletter copy];
+					// NSLog(@"%@ - %d", firstletter, count);
+					NSMutableDictionary* cellDict = [[NSMutableDictionary alloc] initWithCapacity:2];
+					[cellDict setObject:firstletter forKey:@"title"];
+					[cellDict setObject:[[NSNumber alloc] initWithInt:count] forKey:@"beginRow"];
+					[m_pTableHeaders addObject: cellDict];
+					[cellDict release];
+				}
+				// Create artist object and add it to the array.
+				UIImageAndTextTableCell *cell = [[UIImageAndTextTableCell alloc] init];
+				[cell setTitle:artistname];
+				[m_pArtists addObject:cell];
+				[cell release];
+				count++;
 			}
 			// Go to the next entry.
 			data = mpd_data_get_next(data);
@@ -138,7 +126,7 @@
 	} else
 		NSLog(@"No data found");
 	// Update the table contents.
-	[m_pTable reloadData];
+	[m_pSectionList reloadData];
 }
 
 
@@ -158,7 +146,31 @@
     if (button == 0)
 		[m_pApp cleanUp];
     else if (button == 1)
-		[m_pApp showSongsViewWithTransition:2];
+		[m_pApp showPlaylistViewWithTransition:2];
+}
+
+
+- (void)tableRowSelected:(NSNotification*)notification 
+{
+	// Get selected cell and artist name.
+	UIImageAndTextTableCell* pCell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
+	NSLog(@"Selected artist: %@", [pCell title]);
+	// Show the albums of the selected artist.
+	[pCell setSelected:FALSE withFade:TRUE];
+	[m_pApp showAlbumsViewWithTransition:1 artist:[pCell title]];
+}
+
+
+- (int)numberOfSectionsInSectionList:(UISectionList *)aSectionList {
+        return [m_pTableHeaders count];
+}
+        
+- (NSString *)sectionList:(UISectionList *)aSectionList titleForSection:(int)section {
+        return [[m_pTableHeaders objectAtIndex:section] objectForKey:@"title"];
+}       
+        
+- (int)sectionList:(UISectionList *)aSectionList rowForSection:(int)section {
+        return [[[m_pTableHeaders objectAtIndex:section] valueForKey:@"beginRow"] intValue];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
@@ -168,8 +180,7 @@
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-	ArtistTableCell *cell = [[ArtistTableCell alloc] initWithArtist: [m_pArtists objectAtIndex: row]];
-    return cell;
+    return [m_pArtists objectAtIndex:row];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 

@@ -24,7 +24,6 @@
 #import <CoreFoundation/CoreFoundation.h>
 #import <Foundation/Foundation.h>
 #import <UIKit/CDStructures.h>
-#import <UIKit/UIDateLabel.h>
 #import <UIKit/UITable.h>
 #import <UIKit/UITableCell.h>
 #import <UIKit/UITableColumn.h>
@@ -33,60 +32,12 @@
 #import "application.h"
 
 //////////////////////////////////////////////////////////////////////////
-// SongTableCell: implementation.
-//////////////////////////////////////////////////////////////////////////
-
-@implementation SongTableCell
-
-- (id) initWithSong: (NSDictionary *)song
-{
-	self = [super init];
-	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(34.0f, 3.0f, 260.0f, 29.0f)];
-	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(35.0f, 28.0f, 260.0f, 20.0f)];
-	play_image = [[UIImageView alloc] initWithFrame: CGRectMake(10.0f, 17.0f, 16.0f, 16.0f)]; 
-		
-	float c[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	float h[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-//	float b[] = { 0.663f, 0.0f, 0.031f, 1.0f };		// Opaque red.
-	
-	[song_name setText: [song objectForKey: @"SONG"]];
-	[song_name setFont: [UIImageAndTextTableCell defaultTitleFont]];
-	[song_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[song_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
-	
-	[artist_name setText: [song objectForKey: @"ARTIST"]];
-	[artist_name setFont: [UIDateLabel defaultFont]];
-	[artist_name setColor: CGColorCreateCopyWithAlpha([artist_name color], 0.4f)];
-	[artist_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[artist_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
-
-	if ([song objectForKey: @"CURRENT"] == @"1")
-		[play_image setImage:[UIImage applicationImageNamed:@"resources/play_small.png"]];
-
-	[self addSubview: artist_name];
-	[self addSubview: song_name];
-	[self addSubview: play_image];
-	return self;
-}
-
-- (void) drawContentInRect: (struct CGRect)rect selected: (BOOL) selected
-{
-    [song_name setHighlighted: selected];
-    [artist_name setHighlighted: selected];
-    [play_image setHighlighted: selected];
-    
-    [super drawContentInRect: rect selected: selected];
-}
-
-@end
-
-//////////////////////////////////////////////////////////////////////////
 // SongsView: implementation.
 //////////////////////////////////////////////////////////////////////////
 
 @implementation SongsView
 
-- (void) Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD
+- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD
 {
 	m_pApp = pApp;
 	m_pMPD = pMPD;
@@ -99,24 +50,22 @@
 	m_pApp = NULL;
 	m_pMPD = NULL;
 	
-	// Create the storage array for the songs.
+	// Create the storage array.
 	m_pSongs = [[NSMutableArray alloc] init];
+	
     // Create the table.
     m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
     [self addSubview: m_pTable]; 
-
-    [m_pTable setRowHeight:56.0f];
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient"
-												   identifier: @"column1" width: 320.0f];
+    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
     [m_pTable addTableColumn: col]; 
-    [m_pTable setDataSource: self];
     [m_pTable setDelegate: self];
-	[m_pTable setAllowsReordering:YES];
+    [m_pTable setDataSource: self];
 	[m_pTable setSeparatorStyle:1];
+    [m_pTable setRowHeight:42.0f];
 
     // Create the navigation bar.
 	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-    [nav showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
+    [nav showLeftButton:@"Albums" withStyle:2 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
     [nav setBarStyle: 1];	// Dark style.
     [nav setDelegate:self];
     [nav enableAnimation];
@@ -130,30 +79,31 @@
 
 //  --- OTHER METHODS -----------------------------------------------
 
-- (void) ShowPlaylist
+- (void)ShowSongs:(NSString *)albumname artist:(NSString *)name
 {
 	if (!m_pMPD)
 		return;
-	// Clear the songs array.
+	// Clear the array.
 	[m_pSongs removeAllObjects];
-	// Get the current song id, if any.
-	int current_id = -1;
-	mpd_Song* pSong = mpd_playlist_get_current_song(m_pMPD);
-	if (pSong)
-		current_id = pSong->id;
-	// Get the current playlist.
-	MpdData *data = mpd_playlist_get_changes(m_pMPD, -1);
+	// Add the 'add all' item.
+	UIImageAndTextTableCell *cell = [[UIImageAndTextTableCell alloc] init];
+	[cell setTitle:@"Add all songs"];
+	[cell setImage:[UIImage applicationImageNamed:@"resources/add.png"]];
+	[m_pSongs addObject:cell];
+	[cell release];
+	// Get the list of songs.
+	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_TITLE);
+	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ALBUM, [albumname cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	MpdData *data = mpd_database_search_commit(m_pMPD);
 	if (data) {
 		do {
-			if (data->type == MPD_DATA_TYPE_SONG) {
-				// Create song object.
-				NSMutableDictionary* song = [[NSMutableDictionary alloc] init];
-				[song setObject:[NSString stringWithCString: data->song->title] forKey:@"SONG"];
-				[song setObject:[NSString stringWithFormat: @"%s, %s", data->song->artist, data->song->album] forKey:@"ARTIST"];
-				[song setObject:(current_id == data->song->id ? @"1" : @"0") forKey:@"CURRENT"];
-				[song autorelease];
-				// Add the song object to the array.
-				[m_pSongs addObject:song];
+			if (data->type == MPD_DATA_TYPE_TAG) {
+				// Create album object and add it to the array.
+				cell = [[UIImageAndTextTableCell alloc] init];
+				[cell setTitle:[NSString stringWithCString: data->tag]];
+				[cell setImage:[UIImage applicationImageNamed:@"resources/add2.png"]];
+				[m_pSongs addObject:cell];
+				[cell release];
 			}
 			// Go to the next entry.
 			data = mpd_data_get_next(data);
@@ -161,35 +111,65 @@
 	} else
 		NSLog(@"No data found");
 	// Update the table contents.
-    [m_pTable reloadData];
+	[m_pTable reloadData];
+	[m_pTitle setTitle: albumname];
+	m_pArtistName = [name copy];
+	m_pAlbumName = [albumname copy];
 }
 
 
-- (void) UpdateTitle
+- (BOOL)AddSong:(NSString *)name
 {
-	int totalTime = mpd_status_get_total_song_time(m_pMPD);
-	int elapsedTime = mpd_status_get_elapsed_song_time(m_pMPD);
-	NSString* str = [NSString stringWithFormat:@"%d:%02d - %d:%02d", elapsedTime / 60, elapsedTime % 60, totalTime / 60, totalTime % 60];
-	[m_pTitle setTitle: str]; 
+	// Find the full path and add it to the playlist.
+	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_FILENAME);
+	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ARTIST, [m_pArtistName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ALBUM, [m_pAlbumName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_TITLE, [name cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	MpdData* data = mpd_database_search_commit(m_pMPD);
+	BOOL bSuccess = FALSE;
+	if (data) {
+		if (data->type == MPD_DATA_TYPE_TAG) {
+			// Add the song to the current playlist.
+			mpd_playlist_queue_add(m_pMPD, data->tag);
+			NSLog(@"Added file: %s", data->tag);
+			bSuccess = TRUE;
+		}
+	}
+	return bSuccess;
 }
 
 //  --- DELEGATE METHODS -----------------------------------------------
 
 - (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button
 {
-    NSLog(@"SongView: button %d", button);
+    NSLog(@"SongsView: button %d", button);
     if (button == 0)
 		[m_pApp cleanUp];
-    else if (button == 1) {
-    	if (m_Editing) {
-			[m_pTable enableRowDeletion:YES animated:YES];
-			[navbar showLeftButton:@"Done" withStyle:0 rightButton:@"Exit" withStyle:3];
-    	} else {
-    		[m_pTable enableRowDeletion:NO animated:YES];
-    		[navbar showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];
-    	}
-    	m_Editing = !m_Editing;
-    }
+    else if (button == 1)
+		[m_pApp showAlbumsViewWithTransition:2 artist:m_pArtistName];
+}
+
+
+- (void)tableRowSelected:(NSNotification*)notification 
+{
+	// Get selected cell and song name.
+	UIImageAndTextTableCell* pCell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
+	NSLog(@"Selected song: %@", [pCell title]);
+	[pCell setSelected:FALSE withFade:TRUE];
+	// Add all songs?
+	if ([[notification object] selectedRow] == 0) {
+		int i;
+		for (i = 1;i < [m_pSongs count];i++) {
+			pCell = [m_pSongs objectAtIndex:i];
+			[self AddSong:[pCell title]];
+		}
+	} else {
+		[self AddSong:[pCell title]];
+	}
+	// Flush the queue.
+	mpd_playlist_queue_commit(m_pMPD);
+	// Go back to the album view.
+	[m_pApp showAlbumsViewWithTransition:2 artist:m_pArtistName];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
@@ -199,38 +179,13 @@
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-    SongTableCell *cell = [[SongTableCell alloc] initWithSong: [m_pSongs objectAtIndex: row]];
-    return cell;
+    return [m_pSongs objectAtIndex:row];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 
     reusing: (BOOL) reusing
 {
     return [self table: table cellForRow: row column: col];
-}
-
-- (BOOL)table:(UITable*)table canDeleteRow: (int)row
-{
-	return YES;
-}
-
-- (void)table:(UITable*)table deleteRow: (int)row
-{
-	NSLog(@"table:deleteRow: %d", row);
-   	// Remove the song from the playlist.
-	mpd_playlist_delete_pos(m_pMPD, row);
-}
-
-- (BOOL)table:(UITable*)table canMoveRow: (int)row
-{
-	return (row == 0) ? NO : YES;
-}
-
--(int)table:(UITable*)table movedRow: (int)row toRow: (int)dest
-{
-	NSLog(@"table:movedRow:toRow: %i, %i", row, dest);
-	mpd_playlist_move_pos(m_pMPD, row, dest);
-	return dest;
 }
 
 @end

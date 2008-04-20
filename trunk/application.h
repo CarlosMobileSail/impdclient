@@ -30,8 +30,10 @@
 // Forward declarations.
 //////////////////////////////////////////////////////////////////////////
 
-@class SongsView;
+@class PlaylistView;
 @class ArtistsView;
+@class AlbumsView;
+@class SongsView;
 
 //////////////////////////////////////////////////////////////////////////
 // MPDClientApplication: class definition.
@@ -39,26 +41,36 @@
 
 @interface MPDClientApplication :  UIApplication
 {
-   UIView* m_pMainView;
-   SongsView* m_pSongsView;
-   ArtistsView* m_pArtistsView;
-   UITransitionView *m_pTransitionView;
-   
-   UIButtonBar* m_pButtonBar;
-   BOOL m_ShowPlaylist;
+	UIView* m_pMainView;
+	PlaylistView* m_pPlaylistView;
+	ArtistsView* m_pArtistsView;
+	AlbumsView* m_pAlbumsView;
+	SongsView* m_pSongsView;
+	UITransitionView *m_pTransitionView;
 
-   MpdObj* m_pMPD;
-   NSTimer* m_pTimer;
+	UIButtonBar* m_pButtonBar;
+	BOOL m_ShowPlaylist;
+	int m_ReconnectCount;
+
+	MpdObj* m_pMPD;
+	NSTimer* m_pTimer;
 }
 - (void)cleanUp;
+- (void)open_connection;
 - (void)UpdateTitle;
 - (void)ShowPlaylist;
 - (void)UpdateButtonBar;
 - (id)timertick: (NSTimer *)timer;
 
-- (void)showSongsViewWithTransition:(int)trans;
+- (void)showPlaylistViewWithTransition:(int)trans;
 - (void)showArtistsViewWithTransition:(int)trans;
+- (void)showAlbumsViewWithTransition:(int)trans artist:(NSString *)name;
+- (void)showSongsViewWithTransition:(int)trans album:(NSString *)albumname artist:(NSString *)name;
 @end
+
+//////////////////////////////////////////////////////////////////////////
+// MPDClientApplication: externals.
+//////////////////////////////////////////////////////////////////////////
 
 extern NSString *kUIButtonBarButtonAction;
 extern NSString *kUIButtonBarButtonInfo;

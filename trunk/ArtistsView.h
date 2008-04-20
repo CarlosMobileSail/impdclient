@@ -25,8 +25,7 @@
 #import <Foundation/NSDictionary.h>
 #import <UIKit/UIKit.h>
 #import <UIKit/UIApplication.h>
-#import <UIKit/UITextLabel.h>
-#import <UIKit/UITableCell.h>
+#import <UIKit/UISectionList.h>
 
 #import "libmpd/libmpd.h"
 
@@ -37,30 +36,20 @@
 @class MPDClientApplication;
 
 //////////////////////////////////////////////////////////////////////////
-// ArtistTableCell: class definition.
-//////////////////////////////////////////////////////////////////////////
-
-@interface ArtistTableCell : UITableCell
-{
-    UITextLabel *artist_name;
-}
-- (id) initWithArtist: (NSDictionary *)artist;
-@end
-
-
-//////////////////////////////////////////////////////////////////////////
 // ArtistsView: class definition.
 //////////////////////////////////////////////////////////////////////////
 
 @interface ArtistsView : UIView
 {
 	UINavigationBar* m_pNavigationBar;
+	UISectionList* m_pSectionList;
 	UINavigationItem* m_pTitle;
 
 	MpdObj* m_pMPD;
 	MPDClientApplication* m_pApp;
 	
 	NSMutableArray* m_pArtists;
+	NSMutableArray* m_pTableHeaders;
 	UITable* m_pTable;
 }
 - (id)initWithFrame:(struct CGRect)frame;

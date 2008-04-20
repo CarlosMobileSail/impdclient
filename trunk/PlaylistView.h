@@ -25,6 +25,8 @@
 #import <Foundation/NSDictionary.h>
 #import <UIKit/UIKit.h>
 #import <UIKit/UIApplication.h>
+#import <UIKit/UITextLabel.h>
+#import <UIKit/UITableCell.h>
 
 #import "libmpd/libmpd.h"
 
@@ -35,15 +37,28 @@
 @class MPDClientApplication;
 
 //////////////////////////////////////////////////////////////////////////
-// SongsView: class definition.
+// SongTableCell: class definition.
 //////////////////////////////////////////////////////////////////////////
 
-@interface SongsView : UIView
+@interface SongTableCell : UITableCell
+{
+    UITextLabel *song_name;
+    UITextLabel *artist_name;
+    UIImageView* play_image;
+}
+- (id) initWithSong: (NSDictionary *)song;
+@end
+
+
+//////////////////////////////////////////////////////////////////////////
+// PlaylistView: class definition.
+//////////////////////////////////////////////////////////////////////////
+
+@interface PlaylistView : UIView
 {
 	UINavigationBar* m_pNavigationBar;
 	UINavigationItem* m_pTitle;
-	NSString* m_pArtistName;
-	NSString* m_pAlbumName;
+	BOOL m_Editing;
 
 	MpdObj* m_pMPD;
 	MPDClientApplication* m_pApp;
@@ -54,6 +69,6 @@
 - (id)initWithFrame:(struct CGRect)frame;
 - (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
 
-- (void)ShowSongs:(NSString *)albumname artist:(NSString *)name;
-- (BOOL)AddSong:(NSString *)name;
+- (void)ShowPlaylist;
+- (void)UpdateTitle;
 @end

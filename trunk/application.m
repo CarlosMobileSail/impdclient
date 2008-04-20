@@ -28,8 +28,10 @@
 #import <UIKit/UIHardware.h>
 
 #import "application.h"
-#import "SongsView.h"
+#import "PlaylistView.h"
 #import "ArtistsView.h"
+#import "AlbumsView.h"
+#import "SongsView.h"
 
 //////////////////////////////////////////////////////////////////////////
 // MPD: callback functions.
@@ -37,7 +39,13 @@
 
 void error_callback(MpdObj *mi, int errorid, char *msg, void *userdata)
 {
-	NSLog(@"Error [%d]: %s", errorid, msg);
+	MPDClientApplication* pApp = (MPDClientApplication *)userdata;
+	// Is the connection lost?
+	if (errorid == MPD_NOT_CONNECTED) {
+		// Try to reconnect.
+		[pApp open_connection];
+	} else
+		NSLog(@"Error [%d]: %s", errorid, msg);
 }
 
 void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
@@ -61,6 +69,8 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		[pApp ShowPlaylist];
 		bHandled = TRUE;
 	}
+	if (what & MPD_CST_BITRATE)
+		bHandled = TRUE;
 	if (!bHandled)
 		NSLog(@"Status changed: 0x%08X", (int)what);
 }
@@ -91,18 +101,19 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 //	debug_set_output(stdout);
 //	debug_set_level(4);			// DEBUG_INFO + 1
 	
-	// Create mpd object.
-	m_pMPD = mpd_new("192.168.2.2", 6600, NULL);
-	// Connect signals.
-	mpd_signal_connect_error(m_pMPD, (ErrorCallback)error_callback, NULL);
-	mpd_signal_connect_status_changed(m_pMPD, (StatusChangedCallback)status_changed, self);
-	// Set timeout
-	mpd_set_connection_timeout(m_pMPD, 10);
-
-	if (mpd_connect(m_pMPD) != MPD_OK) {
-		mpd_free(m_pMPD);
-		m_pMPD = NULL;
+	// Create mpd object?
+	if (!m_pMPD) {
+		m_pMPD = mpd_new("192.168.2.2", 6600, NULL);
+		// Connect signals.
+		mpd_signal_connect_error(m_pMPD, (ErrorCallback)error_callback, self);
+		mpd_signal_connect_status_changed(m_pMPD, (StatusChangedCallback)status_changed, self);
+		// Set timeout
+		mpd_set_connection_timeout(m_pMPD, 10);
 	}
+	NSLog(@"opening connection to mpd");
+	// Try to connect.
+	mpd_connect(m_pMPD);
+	m_ReconnectCount = 0;
 }
 
 
@@ -194,7 +205,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		if (m_ShowPlaylist)
 			[self showArtistsViewWithTransition:1];
 		else
-			[self showSongsViewWithTransition:2];
+			[self showPlaylistViewWithTransition:2];
 		break;
 	}
 }
@@ -202,7 +213,6 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 
 - (UIButtonBar *)createButtonBar 
 {
-	NSLog(@"createButtonBar");
 	UIButtonBar *buttonBar;
 	buttonBar = [ [ UIButtonBar alloc ] 
 		initInView: m_pMainView
@@ -232,8 +242,8 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)UpdateTitle
 {
 	if (m_ShowPlaylist) {
-		if (m_pSongsView)
-			[m_pSongsView UpdateTitle];
+		if (m_pPlaylistView)
+			[m_pPlaylistView UpdateTitle];
 	} else {
 		if (m_pArtistsView)
 			[m_pArtistsView UpdateTitle];
@@ -243,16 +253,24 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 
 - (void)ShowPlaylist
 {
-	if (m_pSongsView)
-		[m_pSongsView ShowPlaylist]; 
+	if (m_pPlaylistView)
+		[m_pPlaylistView ShowPlaylist]; 
 }
 
 
 - (id)timertick: (NSTimer *)timer
 {
 	// Service the mpd status handler.
-	if (m_pMPD)
-		mpd_status_update(m_pMPD);
+	if (m_pMPD) {
+		if (mpd_status_update(m_pMPD) == MPD_NOT_CONNECTED) {
+			m_ReconnectCount++;
+			if (m_ReconnectCount > 20) {
+				// Try to reconnect once every 5 seconds.
+				[self open_connection];
+				m_ReconnectCount = 0;
+			}
+		}
+	}
 }
 
 
@@ -260,10 +278,12 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 {
     UIWindow *window;
 
-	// Create the storage array for the songs.
+	// Clear the pointers.
 	m_pMPD = NULL;
-	m_pSongsView = NULL;
+	m_pPlaylistView = NULL;
 	m_pArtistsView = NULL;
+	m_pAlbumsView = NULL;
+	m_pSongsView = NULL;
 	
     struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
     rect.origin.x = rect.origin.y = 0.0f;
@@ -290,21 +310,21 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
     
 	// Open a connection to the server.
 	[self open_connection];
-    // Show the songs view.
-	[self showSongsViewWithTransition:1];
+    // Show the playlist view.
+	[self showPlaylistViewWithTransition:1];
 }
 
 
-- (void)showSongsViewWithTransition:(int)trans
+- (void)showPlaylistViewWithTransition:(int)trans
 {
-	if (!m_pSongsView) {
+	if (!m_pPlaylistView) {
 		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
 		rect.origin.x = rect.origin.y = 0.0f;
-		m_pSongsView = [[SongsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
-		[m_pSongsView Initialize:self mpd:m_pMPD];
+		m_pPlaylistView = [[PlaylistView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		[m_pPlaylistView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = TRUE;
-	[m_pTransitionView transition:trans toView:m_pSongsView];
+	[m_pTransitionView transition:trans toView:m_pPlaylistView];
 }
 
 
@@ -319,6 +339,34 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	m_ShowPlaylist = FALSE;
 	[m_pArtistsView ShowArtists];
 	[m_pTransitionView transition:trans toView:m_pArtistsView];
+}
+
+
+- (void)showAlbumsViewWithTransition:(int)trans artist:(NSString *)name
+{
+	if (!m_pAlbumsView) {
+		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
+		rect.origin.x = rect.origin.y = 0.0f;
+		m_pAlbumsView = [[AlbumsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		[m_pAlbumsView Initialize:self mpd:m_pMPD];
+	}
+	m_ShowPlaylist = FALSE;
+	[m_pAlbumsView ShowAlbums:name];
+	[m_pTransitionView transition:trans toView:m_pAlbumsView];
+}
+
+
+- (void)showSongsViewWithTransition:(int)trans album:(NSString *)albumname artist:(NSString *)name
+{
+	if (!m_pSongsView) {
+		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
+		rect.origin.x = rect.origin.y = 0.0f;
+		m_pSongsView = [[SongsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		[m_pSongsView Initialize:self mpd:m_pMPD];
+	}
+	m_ShowPlaylist = FALSE;
+	[m_pSongsView ShowSongs:albumname artist:name];
+	[m_pTransitionView transition:trans toView:m_pSongsView];
 }
 
 @end
