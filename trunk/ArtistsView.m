@@ -60,27 +60,27 @@
 	[m_pSectionList setDataSource:self];
 	[m_pSectionList reloadData];
 	[self addSubview:m_pSectionList];
-	
-    // Get the real table.
-    m_pTable = [m_pSectionList table];
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
-    [m_pTable addTableColumn: col]; 
-    [m_pTable setDelegate: self];
-	[m_pTable setSeparatorStyle:1];
-    [m_pTable setRowHeight:42.0f];
 
-    // Create the navigation bar.
+	// Get the real table.
+	m_pTable = [m_pSectionList table];
+	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
+	[m_pTable addTableColumn: col]; 
+	[m_pTable setDelegate: self];
+	[m_pTable setSeparatorStyle:1];
+	[m_pTable setRowHeight:42.0f];
+	
+	// Create the navigation bar.
 	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-    [nav showLeftButton:@"Playlist" withStyle:2 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
-    [nav setBarStyle: 1];	// Dark style.
-    [nav setDelegate:self];
-    [nav enableAnimation];
+	[nav showLeftButton:@"Playlist" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
+	[nav setBarStyle: 1];	// Dark style.
+	[nav setDelegate:self];
+	[nav enableAnimation];
 
 	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
 	[nav pushNavigationItem: m_pTitle];
 	
-    [self addSubview: nav];
-    return self;
+	[self addSubview: nav];
+	return self;
 }
 
 //  --- OTHER METHODS -----------------------------------------------
@@ -142,10 +142,10 @@
 
 - (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button
 {
-    NSLog(@"ArtistView: button %d", button);
-    if (button == 0)
+	NSLog(@"ArtistView: button %d", button);
+	if (button == 0)
 		[m_pApp cleanUp];
-    else if (button == 1)
+	else if (button == 1)
 		[m_pApp showPlaylistViewWithTransition:2];
 }
 
@@ -162,31 +162,30 @@
 
 
 - (int)numberOfSectionsInSectionList:(UISectionList *)aSectionList {
-        return [m_pTableHeaders count];
+	return [m_pTableHeaders count];
 }
-        
+
 - (NSString *)sectionList:(UISectionList *)aSectionList titleForSection:(int)section {
-        return [[m_pTableHeaders objectAtIndex:section] objectForKey:@"title"];
-}       
-        
+	return [[m_pTableHeaders objectAtIndex:section] objectForKey:@"title"];
+}
+
 - (int)sectionList:(UISectionList *)aSectionList rowForSection:(int)section {
-        return [[[m_pTableHeaders objectAtIndex:section] valueForKey:@"beginRow"] intValue];
+	return [[[m_pTableHeaders objectAtIndex:section] valueForKey:@"beginRow"] intValue];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-    return [m_pArtists count];
+	return [m_pArtists count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-    return [m_pArtists objectAtIndex:row];
+	return [m_pArtists objectAtIndex:row];
 }
 
-- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 
-    reusing: (BOOL) reusing
+- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing
 {
-    return [self table: table cellForRow: row column: col];
+	return [self table: table cellForRow: row column: col];
 }
 
 @end

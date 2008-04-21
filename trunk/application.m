@@ -23,6 +23,7 @@
  
 #import <CoreFoundation/CoreFoundation.h>
 #import <Foundation/Foundation.h>
+#import <UIKit/CDStructures.h>
 #import <UIKit/UINavigationBar.h>
 #import <UIKit/UIWindow.h>
 #import <UIKit/UIHardware.h>
@@ -85,14 +86,14 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 {
 	if (m_pMPD)
 		mpd_free(m_pMPD);
-    [self terminateWithSuccess];
+	[self terminateWithSuccess];
 }
 
 
 - (void)cleanUp
 {
-    NSLog(@"cleanUP");
-    [self applicationWillTerminate:nil];
+	NSLog(@"cleanUP");
+	[self applicationWillTerminate:nil];
 }
 
 
@@ -112,8 +113,11 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	}
 	NSLog(@"opening connection to mpd");
 	// Try to connect.
-	mpd_connect(m_pMPD);
-	m_ReconnectCount = 0;
+	if (mpd_connect(m_pMPD) == MPD_OK) {
+		m_Connected = TRUE;
+		m_ReconnectCount = 0;
+	} else
+		m_Connected = FALSE;
 }
 
 
@@ -122,58 +126,58 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	BOOL bIsPlaying = (mpd_player_get_state(m_pMPD) == MPD_PLAYER_PLAY);
 	NSLog(@"buttonBarItems");
 	return [ NSArray arrayWithObjects:
-    [ NSDictionary dictionaryWithObjectsAndKeys:
-           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           bIsPlaying ? @"resources/pause.png" : @"resources/play.png", kUIButtonBarButtonInfo,
-           @"resources/play.png", kUIButtonBarButtonSelectedInfo,
-           [ NSNumber numberWithInt: 1], kUIButtonBarButtonTag,
-           self, kUIButtonBarButtonTarget,
-           (bIsPlaying ? @"Pause" : @"Play"), kUIButtonBarButtonTitle,
-           @"0", kUIButtonBarButtonType,
-           nil 
-           ],
-    [ NSDictionary dictionaryWithObjectsAndKeys:
-           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"resources/previous.png", kUIButtonBarButtonInfo,
-           @"resources/previous.png", kUIButtonBarButtonSelectedInfo,
-           [ NSNumber numberWithInt: 2], kUIButtonBarButtonTag,
-           self, kUIButtonBarButtonTarget,
-           @"Previous", kUIButtonBarButtonTitle,
-           @"0", kUIButtonBarButtonType,
-           nil 
-           ],
-    [ NSDictionary dictionaryWithObjectsAndKeys:
-           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"resources/next.png", kUIButtonBarButtonInfo,
-           @"resources/next.png", kUIButtonBarButtonSelectedInfo,
-           [ NSNumber numberWithInt: 3], kUIButtonBarButtonTag,
-           self, kUIButtonBarButtonTarget,
-           @"Next", kUIButtonBarButtonTitle,
-           @"0", kUIButtonBarButtonType,
-           nil 
-           ],
-    [ NSDictionary dictionaryWithObjectsAndKeys:
-           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"resources/volume.png", kUIButtonBarButtonInfo,
-           @"resources/volume.png", kUIButtonBarButtonSelectedInfo,
-           [ NSNumber numberWithInt: 4], kUIButtonBarButtonTag,
-           self, kUIButtonBarButtonTarget,
-           @"Volume", kUIButtonBarButtonTitle,
-           @"0", kUIButtonBarButtonType,
-           nil 
-           ],
-    [ NSDictionary dictionaryWithObjectsAndKeys:
-           @"buttonBarItemTapped:", kUIButtonBarButtonAction,
-           @"resources/music_add.png", kUIButtonBarButtonInfo,
-           @"resources/music_add.png", kUIButtonBarButtonSelectedInfo,
-           [ NSNumber numberWithInt: 5], kUIButtonBarButtonTag,
-           self, kUIButtonBarButtonTarget,
-           @"Add", kUIButtonBarButtonTitle,
-           @"0", kUIButtonBarButtonType,
-           nil 
-           ],
-    nil
-  ];
+	[ NSDictionary dictionaryWithObjectsAndKeys:
+		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
+		bIsPlaying ? @"resources/pause.png" : @"resources/play.png", kUIButtonBarButtonInfo,
+		@"resources/play.png", kUIButtonBarButtonSelectedInfo,
+		[ NSNumber numberWithInt: 1], kUIButtonBarButtonTag,
+		self, kUIButtonBarButtonTarget,
+		(bIsPlaying ? @"Pause" : @"Play"), kUIButtonBarButtonTitle,
+		@"0", kUIButtonBarButtonType,
+		nil 
+	],
+	[ NSDictionary dictionaryWithObjectsAndKeys:
+		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
+		@"resources/previous.png", kUIButtonBarButtonInfo,
+		@"resources/previous.png", kUIButtonBarButtonSelectedInfo,
+		[ NSNumber numberWithInt: 2], kUIButtonBarButtonTag,
+		self, kUIButtonBarButtonTarget,
+		@"Previous", kUIButtonBarButtonTitle,
+		@"0", kUIButtonBarButtonType,
+		nil 
+	],
+	[ NSDictionary dictionaryWithObjectsAndKeys:
+		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
+		@"resources/next.png", kUIButtonBarButtonInfo,
+		@"resources/next.png", kUIButtonBarButtonSelectedInfo,
+		[ NSNumber numberWithInt: 3], kUIButtonBarButtonTag,
+		self, kUIButtonBarButtonTarget,
+		@"Next", kUIButtonBarButtonTitle,
+		@"0", kUIButtonBarButtonType,
+		nil 
+		],
+	[ NSDictionary dictionaryWithObjectsAndKeys:
+		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
+		@"resources/volume.png", kUIButtonBarButtonInfo,
+		@"resources/volume.png", kUIButtonBarButtonSelectedInfo,
+		[ NSNumber numberWithInt: 4], kUIButtonBarButtonTag,
+		self, kUIButtonBarButtonTarget,
+		@"Volume", kUIButtonBarButtonTitle,
+		@"0", kUIButtonBarButtonType,
+		nil 
+	],
+	[ NSDictionary dictionaryWithObjectsAndKeys:
+		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
+		@"resources/music_add.png", kUIButtonBarButtonInfo,
+		@"resources/music_add.png", kUIButtonBarButtonSelectedInfo,
+		[ NSNumber numberWithInt: 5], kUIButtonBarButtonTag,
+		self, kUIButtonBarButtonTarget,
+		@"Add", kUIButtonBarButtonTitle,
+		@"0", kUIButtonBarButtonType,
+		nil 
+		],
+	nil
+	];
 }
 
 
@@ -199,7 +203,8 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		break;
 	case 4:
 		NSLog(@"Volume");
-		break;        
+		[self ShowVolumeDialog];
+		break;
 	case 5:
 		NSLog(@"Add");
 		if (m_ShowPlaylist)
@@ -258,13 +263,49 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 }
 
 
+- (void)changeVolume
+{
+	int volume = [m_pVolumeSlider value];
+	NSLog(@"Change volume %d", volume);
+	mpd_status_set_volume(m_pMPD, volume);
+}
+
+
+- (void)ShowVolumeDialog
+{
+	int volume = mpd_status_get_volume(m_pMPD);
+	// Create the alert sheet.
+	UIAlertSheet *alertSheet = [[UIAlertSheet alloc] initWithFrame:CGRectMake(0, 240 - 100, 320, 240)];
+	[alertSheet setBodyText:@"-"];
+	
+	m_pVolumeSlider = [[UISliderControl alloc] initWithFrame:CGRectMake(10, 5, 300, 15)];
+	[m_pVolumeSlider setMinValue:0.0];
+	[m_pVolumeSlider setMaxValue:100.0];
+	[m_pVolumeSlider setValue: volume];
+	[m_pVolumeSlider setShowValue:YES];
+	[m_pVolumeSlider addTarget:self action:@selector(changeVolume) forEvents:1|4]; // mouseDown | mouseDragged
+	[alertSheet addSubview:m_pVolumeSlider];
+	
+	[alertSheet addButtonWithTitle:@"Close"];
+	[alertSheet setDelegate:self];
+	[alertSheet presentSheetFromAboveView:m_pMainView];
+}
+
+
+- (void)alertSheet:(UIAlertSheet*)sheet buttonClicked:(int)button
+{
+	if (button == 1)
+		[sheet dismiss];
+}
+
+
 - (id)timertick: (NSTimer *)timer
 {
 	// Service the mpd status handler.
 	if (m_pMPD) {
 		if (mpd_status_update(m_pMPD) == MPD_NOT_CONNECTED) {
 			m_ReconnectCount++;
-			if (m_ReconnectCount > 20) {
+			if (m_ReconnectCount > 20 || m_Connected) {
 				// Try to reconnect once every 5 seconds.
 				[self open_connection];
 				m_ReconnectCount = 0;
@@ -285,32 +326,32 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	m_pAlbumsView = NULL;
 	m_pSongsView = NULL;
 	
-    struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
-    rect.origin.x = rect.origin.y = 0.0f;
-    window = [[UIWindow alloc] initWithContentRect: rect];
-    m_pTransitionView = [[UITransitionView alloc] initWithFrame:rect];
-    m_pMainView = [[UIView alloc] initWithFrame:rect];
-    [window orderFront: self];
-    [window makeKey: self];
-    [window _setHidden: NO];
-    [window setContentView: m_pMainView];
-    [m_pMainView addSubview:m_pTransitionView];
+	struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
+	rect.origin.x = rect.origin.y = 0.0f;
+	window = [[UIWindow alloc] initWithContentRect: rect];
+	m_pTransitionView = [[UITransitionView alloc] initWithFrame:rect];
+	m_pMainView = [[UIView alloc] initWithFrame:rect];
+	[window orderFront: self];
+	[window makeKey: self];
+	[window _setHidden: NO];
+	[window setContentView: m_pMainView];
+	[m_pMainView addSubview:m_pTransitionView];
 
-    // Create the button bar.
-    m_pButtonBar = [ self createButtonBar ];
-    [m_pMainView addSubview: m_pButtonBar];
-    
-    // Create a timer (every 0.2 seconds).
+	// Create the button bar.
+	m_pButtonBar = [ self createButtonBar ];
+	[m_pMainView addSubview: m_pButtonBar];
+
+	// Create a timer (every 0.2 seconds).
 	double tickIntervalM = 0.2;
 	m_pTimer = [NSTimer scheduledTimerWithTimeInterval: tickIntervalM
-                target: self
-                selector: @selector(timertick:)
-                userInfo: nil
-                repeats: YES];
-    
+				target: self
+				selector: @selector(timertick:)
+				userInfo: nil
+				repeats: YES];
+
 	// Open a connection to the server.
 	[self open_connection];
-    // Show the playlist view.
+	// Show the playlist view.
 	[self showPlaylistViewWithTransition:1];
 }
 

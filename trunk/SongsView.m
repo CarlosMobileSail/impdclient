@@ -32,6 +32,13 @@
 #import "application.h"
 
 //////////////////////////////////////////////////////////////////////////
+// SongTableCell: implementation.
+//////////////////////////////////////////////////////////////////////////
+
+@implementation SongTableCell
+@end
+
+//////////////////////////////////////////////////////////////////////////
 // SongsView: implementation.
 //////////////////////////////////////////////////////////////////////////
 
@@ -49,32 +56,32 @@
 	self = [super initWithFrame:frame];
 	m_pApp = NULL;
 	m_pMPD = NULL;
-	
+
 	// Create the storage array.
 	m_pSongs = [[NSMutableArray alloc] init];
-	
-    // Create the table.
-    m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
-    [self addSubview: m_pTable]; 
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
-    [m_pTable addTableColumn: col]; 
-    [m_pTable setDelegate: self];
-    [m_pTable setDataSource: self];
-	[m_pTable setSeparatorStyle:1];
-    [m_pTable setRowHeight:42.0f];
 
-    // Create the navigation bar.
+	// Create the table.
+	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
+	[self addSubview: m_pTable]; 
+	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
+	[m_pTable addTableColumn: col]; 
+	[m_pTable setDelegate: self];
+	[m_pTable setDataSource: self];
+	[m_pTable setSeparatorStyle:1];
+	[m_pTable setRowHeight:42.0f];
+
+	// Create the navigation bar.
 	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-    [nav showLeftButton:@"Albums" withStyle:2 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
-    [nav setBarStyle: 1];	// Dark style.
-    [nav setDelegate:self];
-    [nav enableAnimation];
+	[nav showLeftButton:@"Albums" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
+	[nav setBarStyle: 1];	// Dark style.
+	[nav setDelegate:self];
+	[nav enableAnimation];
 
 	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
 	[nav pushNavigationItem: m_pTitle];
-	
-    [self addSubview: nav];
-    return self;
+
+	[self addSubview: nav];
+	return self;
 }
 
 //  --- OTHER METHODS -----------------------------------------------
@@ -86,25 +93,28 @@
 	// Clear the array.
 	[m_pSongs removeAllObjects];
 	// Add the 'add all' item.
-	UIImageAndTextTableCell *cell = [[UIImageAndTextTableCell alloc] init];
-	[cell setTitle:@"Add all songs"];
+	SongTableCell *cell = [[SongTableCell alloc] init];
+	[cell setTitle:@"All songs"];
 	[cell setImage:[UIImage applicationImageNamed:@"resources/add.png"]];
 	[m_pSongs addObject:cell];
 	[cell release];
 	// Get the list of songs.
-	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_TITLE);
+	mpd_database_search_start(m_pMPD, TRUE);
 	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ALBUM, [albumname cStringUsingEncoding:[NSString defaultCStringEncoding]]);
 	MpdData *data = mpd_database_search_commit(m_pMPD);
 	if (data) {
 		do {
-			if (data->type == MPD_DATA_TYPE_TAG) {
-				// Create album object and add it to the array.
-				cell = [[UIImageAndTextTableCell alloc] init];
+			// Create album object and add it to the array.
+			cell = [[SongTableCell alloc] init];
+			if (data->type == MPD_DATA_TYPE_TAG)
 				[cell setTitle:[NSString stringWithCString: data->tag]];
-				[cell setImage:[UIImage applicationImageNamed:@"resources/add2.png"]];
-				[m_pSongs addObject:cell];
-				[cell release];
+			if (data->type == MPD_DATA_TYPE_SONG) {
+				[cell setTitle:[NSString stringWithFormat: @"%s %s", data->song->track, data->song->title]];
+				strcpy(cell->m_Path, data->song->file);
 			}
+			[cell setImage:[UIImage applicationImageNamed:@"resources/add2.png"]];
+			[m_pSongs addObject:cell];
+			[cell release];
 			// Go to the next entry.
 			data = mpd_data_get_next(data);
 		} while(data);
@@ -142,10 +152,10 @@
 
 - (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button
 {
-    NSLog(@"SongsView: button %d", button);
-    if (button == 0)
+	NSLog(@"SongsView: button %d", button);
+	if (button == 0)
 		[m_pApp cleanUp];
-    else if (button == 1)
+	else if (button == 1)
 		[m_pApp showAlbumsViewWithTransition:2 artist:m_pArtistName];
 }
 
@@ -153,7 +163,7 @@
 - (void)tableRowSelected:(NSNotification*)notification 
 {
 	// Get selected cell and song name.
-	UIImageAndTextTableCell* pCell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
+	SongTableCell* pCell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
 	NSLog(@"Selected song: %@", [pCell title]);
 	[pCell setSelected:FALSE withFade:TRUE];
 	// Add all songs?
@@ -161,11 +171,10 @@
 		int i;
 		for (i = 1;i < [m_pSongs count];i++) {
 			pCell = [m_pSongs objectAtIndex:i];
-			[self AddSong:[pCell title]];
+			mpd_playlist_queue_add(m_pMPD, pCell->m_Path);
 		}
-	} else {
-		[self AddSong:[pCell title]];
-	}
+	} else
+		mpd_playlist_queue_add(m_pMPD, pCell->m_Path);
 	// Flush the queue.
 	mpd_playlist_queue_commit(m_pMPD);
 	// Go back to the album view.
@@ -174,18 +183,17 @@
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-    return [m_pSongs count];
+	return [m_pSongs count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-    return [m_pSongs objectAtIndex:row];
+	return [m_pSongs objectAtIndex:row];
 }
 
-- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 
-    reusing: (BOOL) reusing
+- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing
 {
-    return [self table: table cellForRow: row column: col];
+	return [self table: table cellForRow: row column: col];
 }
 
 @end

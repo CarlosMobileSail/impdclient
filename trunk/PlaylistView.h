@@ -40,11 +40,11 @@
 // SongTableCell: class definition.
 //////////////////////////////////////////////////////////////////////////
 
-@interface SongTableCell : UITableCell
+@interface PlaylistTableCell : UITableCell
 {
-    UITextLabel *song_name;
-    UITextLabel *artist_name;
-    UIImageView* play_image;
+	UITextLabel *song_name;
+	UITextLabel *artist_name;
+	UIImageView* play_image;
 }
 - (id) initWithSong: (NSDictionary *)song;
 @end

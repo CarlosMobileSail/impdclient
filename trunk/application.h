@@ -23,6 +23,7 @@
 
 #import <UIKit/UIKit.h>
 #import <UIKit/UIApplication.h>
+#import <UIKit/UISliderControl.h>
 
 #import "libmpd/libmpd.h"
 
@@ -42,14 +43,16 @@
 @interface MPDClientApplication :  UIApplication
 {
 	UIView* m_pMainView;
+	UITransitionView* m_pTransitionView;
+	UISliderControl* m_pVolumeSlider;
 	PlaylistView* m_pPlaylistView;
 	ArtistsView* m_pArtistsView;
 	AlbumsView* m_pAlbumsView;
 	SongsView* m_pSongsView;
-	UITransitionView *m_pTransitionView;
 
 	UIButtonBar* m_pButtonBar;
 	BOOL m_ShowPlaylist;
+	BOOL m_Connected;
 	int m_ReconnectCount;
 
 	MpdObj* m_pMPD;
@@ -60,6 +63,7 @@
 - (void)UpdateTitle;
 - (void)ShowPlaylist;
 - (void)UpdateButtonBar;
+- (void)ShowVolumeDialog;
 - (id)timertick: (NSTimer *)timer;
 
 - (void)showPlaylistViewWithTransition:(int)trans;

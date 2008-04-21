@@ -49,32 +49,32 @@
 	self = [super initWithFrame:frame];
 	m_pApp = NULL;
 	m_pMPD = NULL;
-	
+
 	// Create the storage array.
 	m_pAlbums = [[NSMutableArray alloc] init];
-	
-    // Create the table.
-    m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
-    [self addSubview: m_pTable]; 
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
-    [m_pTable addTableColumn: col]; 
-    [m_pTable setDelegate: self];
-    [m_pTable setDataSource: self];
-	[m_pTable setSeparatorStyle:1];
-    [m_pTable setRowHeight:42.0f];
 
-    // Create the navigation bar.
+	// Create the table.
+	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
+	[self addSubview: m_pTable]; 
+	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
+	[m_pTable addTableColumn: col]; 
+	[m_pTable setDelegate: self];
+	[m_pTable setDataSource: self];
+	[m_pTable setSeparatorStyle:1];
+	[m_pTable setRowHeight:42.0f];
+
+	// Create the navigation bar.
 	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-    [nav showLeftButton:@"Artists" withStyle:2 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
-    [nav setBarStyle: 1];	// Dark style.
-    [nav setDelegate:self];
-    [nav enableAnimation];
+	[nav showLeftButton:@"Artists" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
+	[nav setBarStyle: 1];	// Dark style.
+	[nav setDelegate:self];
+	[nav enableAnimation];
 
 	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
 	[nav pushNavigationItem: m_pTitle];
-	
-    [self addSubview: nav];
-    return self;
+
+	[self addSubview: nav];
+	return self;
 }
 
 //  --- OTHER METHODS -----------------------------------------------
@@ -115,10 +115,10 @@
 
 - (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button
 {
-    NSLog(@"AlbumsView: button %d", button);
-    if (button == 0)
+	NSLog(@"AlbumsView: button %d", button);
+	if (button == 0)
 		[m_pApp cleanUp];
-    else if (button == 1)
+	else if (button == 1)
 		[m_pApp showArtistsViewWithTransition:2];
 }
 
@@ -136,18 +136,17 @@
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-    return [m_pAlbums count];
+	return [m_pAlbums count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-    return [m_pAlbums objectAtIndex:row];
+	return [m_pAlbums objectAtIndex:row];
 }
 
-- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 
-    reusing: (BOOL) reusing
+- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing
 {
-    return [self table: table cellForRow: row column: col];
+	return [self table: table cellForRow: row column: col];
 }
 
 @end

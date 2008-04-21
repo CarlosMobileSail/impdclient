@@ -36,14 +36,14 @@
 // SongTableCell: implementation.
 //////////////////////////////////////////////////////////////////////////
 
-@implementation SongTableCell
+@implementation PlaylistTableCell
 
 - (id) initWithSong: (NSDictionary *)song
 {
 	self = [super init];
-	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(36.0f, 3.0f, 260.0f, 29.0f)];
-	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(37.0f, 28.0f, 260.0f, 20.0f)];
-	play_image = [[UIImageView alloc] initWithFrame: CGRectMake(10.0f, 17.0f, 16.0f, 16.0f)]; 
+	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(36, 3, 260, 29)];
+	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(37, 28, 260, 20)];
+	play_image = [[UIImageView alloc] initWithFrame: CGRectMake(10, 17, 16, 16)]; 
 		
 	float c[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float h[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -70,11 +70,11 @@
 
 - (void) drawContentInRect: (struct CGRect)rect selected: (BOOL) selected
 {
-    [song_name setHighlighted: selected];
-    [artist_name setHighlighted: selected];
-    [play_image setHighlighted: selected];
-    
-    [super drawContentInRect: rect selected: selected];
+	[song_name setHighlighted: selected];
+	[artist_name setHighlighted: selected];
+	[play_image setHighlighted: selected];
+	
+	[super drawContentInRect: rect selected: selected];
 }
 
 @end
@@ -101,31 +101,31 @@
 	
 	// Create the storage array for the songs.
 	m_pSongs = [[NSMutableArray alloc] init];
-    // Create the table.
-    m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
-    [self addSubview: m_pTable]; 
+	// Create the table.
+	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0, 48, 320, 480 - 16 - 32 - 50)];
+	[self addSubview: m_pTable]; 
 
-    [m_pTable setRowHeight:56.0f];
-    UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient"
+	[m_pTable setRowHeight:56.0f];
+	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient"
 												   identifier: @"column1" width: 320.0f];
-    [m_pTable addTableColumn: col]; 
-    [m_pTable setDataSource: self];
-    [m_pTable setDelegate: self];
+	[m_pTable addTableColumn: col]; 
+	[m_pTable setDataSource: self];
+	[m_pTable setDelegate: self];
 	[m_pTable setAllowsReordering:YES];
 	[m_pTable setSeparatorStyle:1];
 
-    // Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-    [nav showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];	// 3 = brighter blue.
-    [nav setBarStyle: 1];	// Dark style.
-    [nav setDelegate:self];
-    [nav enableAnimation];
-
+	// Create the navigation bar.
+	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, 48)];
+	[nav showLeftButton:@"Edit" withStyle:0 rightButton:@"Clear All" withStyle:1];	// 1 = red.
+	[nav setBarStyle: 1];	// Dark style.
+	[nav setDelegate:self];
+	[nav enableAnimation];
+	
 	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
 	[nav pushNavigationItem: m_pTitle];
 	
-    [self addSubview: nav];
-    return self;
+	[self addSubview: nav];
+	return self;
 }
 
 //  --- OTHER METHODS -----------------------------------------------
@@ -161,7 +161,7 @@
 	} else
 		NSLog(@"No data found");
 	// Update the table contents.
-    [m_pTable reloadData];
+	[m_pTable reloadData];
 }
 
 
@@ -177,36 +177,50 @@
 
 - (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button
 {
-    NSLog(@"SongView: button %d", button);
-    if (button == 0)
-		[m_pApp cleanUp];
-    else if (button == 1) {
-    	m_Editing = !m_Editing;
-    	if (m_Editing) {
+	NSLog(@"SongView: button %d", button);
+	if (button == 0) {
+		// Alert sheet attached to bootom of Screen.
+		UIAlertSheet *alertSheet = [[UIAlertSheet alloc] initWithFrame:CGRectMake(0, 240 - 50, 320, 240)];
+		[alertSheet setBodyText:@"Clear the playlist?"];
+		[alertSheet setDestructiveButton: [alertSheet addButtonWithTitle:@"Yes"]];
+		[alertSheet addButtonWithTitle:@"No"];
+		[alertSheet setDelegate:self];
+		[alertSheet presentSheetFromAboveView:self];
+	} else if (button == 1) {
+		m_Editing = !m_Editing;
+		if (m_Editing) {
 			[m_pTable enableRowDeletion:YES animated:YES];
-			[navbar showLeftButton:@"Done" withStyle:0 rightButton:@"Exit" withStyle:3];
-    	} else {
-    		[m_pTable enableRowDeletion:NO animated:YES];
-    		[navbar showLeftButton:@"Edit" withStyle:0 rightButton:@"Exit" withStyle:3];
-    	}
-    }
+			[navbar showLeftButton:@"Done" withStyle:0 rightButton:nil withStyle:0];
+		} else {
+			[m_pTable enableRowDeletion:NO animated:YES];
+			[navbar showLeftButton:@"Edit" withStyle:0 rightButton:@"Clear All" withStyle:1];
+		}
+	}
+}
+
+- (void)alertSheet:(UIAlertSheet*)sheet buttonClicked:(int)button
+{
+	if (button == 1) {
+		// Anwer of the clear question is yes: clear it.
+		mpd_playlist_clear(m_pMPD);
+	}
+	[sheet dismiss];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-    return [m_pSongs count];
+	return [m_pSongs count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-    SongTableCell *cell = [[SongTableCell alloc] initWithSong: [m_pSongs objectAtIndex: row]];
-    return cell;
+	PlaylistTableCell *cell = [[PlaylistTableCell alloc] initWithSong: [m_pSongs objectAtIndex: row]];
+	return cell;
 }
 
-- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col 
-    reusing: (BOOL) reusing
+- (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing
 {
-    return [self table: table cellForRow: row column: col];
+	return [self table: table cellForRow: row column: col];
 }
 
 - (BOOL)table:(UITable*)table canDeleteRow: (int)row
@@ -217,7 +231,7 @@
 - (void)table:(UITable*)table deleteRow: (int)row
 {
 	NSLog(@"table:deleteRow: %d", row);
-   	// Remove the song from the playlist.
+	// Remove the song from the playlist.
 	mpd_playlist_delete_pos(m_pMPD, row);
 }
 
