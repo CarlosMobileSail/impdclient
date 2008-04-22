@@ -54,7 +54,7 @@
 	m_pArtists = [[NSMutableArray alloc] init];
 	m_pTableHeaders = [[NSMutableArray alloc] init];
 	
-	CGRect aRect = CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f);
+	CGRect aRect = CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT);
 	// Create the section list.
 	m_pSectionList = [[UISectionList alloc] initWithFrame:aRect showSectionIndex:YES];
 	[m_pSectionList setDataSource:self];
@@ -63,15 +63,15 @@
 
 	// Get the real table.
 	m_pTable = [m_pSectionList table];
-	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
+	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320];
 	[m_pTable addTableColumn: col]; 
 	[m_pTable setDelegate: self];
 	[m_pTable setSeparatorStyle:1];
 	[m_pTable setRowHeight:42.0f];
-	
+
 	// Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
-	[nav showLeftButton:@"Playlist" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
+	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
+	[nav showLeftButton:@"Playlist" withStyle:2 rightButton:@"Search" withStyle:3];		// 2 = arrow left, 3 = blue.
 	[nav setBarStyle: 1];	// Dark style.
 	[nav setDelegate:self];
 	[nav enableAnimation];
@@ -144,7 +144,7 @@
 {
 	NSLog(@"ArtistView: button %d", button);
 	if (button == 0)
-		[m_pApp cleanUp];
+		[m_pApp showSearchViewWithTransition:1];
 	else if (button == 1)
 		[m_pApp showPlaylistViewWithTransition:2];
 }

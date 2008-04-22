@@ -27,12 +27,14 @@
 #import <UIKit/UINavigationBar.h>
 #import <UIKit/UIWindow.h>
 #import <UIKit/UIHardware.h>
+#import <UIKit/UISliderControl.h>
 
 #import "application.h"
 #import "PlaylistView.h"
 #import "ArtistsView.h"
 #import "AlbumsView.h"
 #import "SongsView.h"
+#import "SearchView.h"
 
 //////////////////////////////////////////////////////////////////////////
 // MPD: callback functions.
@@ -221,7 +223,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	UIButtonBar *buttonBar;
 	buttonBar = [ [ UIButtonBar alloc ] 
 		initInView: m_pMainView
-		withFrame: CGRectMake(0.0f, 410.0f, 320.0f, 50.0f)
+		withFrame: CGRectMake(0, 410, 320, BUTTONBARHEIGHT)
 		withItemList: [ self buttonBarItems ] ];
 	[buttonBar setDelegate:self];
 	[buttonBar setBarStyle:1];
@@ -275,7 +277,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 {
 	int volume = mpd_status_get_volume(m_pMPD);
 	// Create the alert sheet.
-	UIAlertSheet *alertSheet = [[UIAlertSheet alloc] initWithFrame:CGRectMake(0, 240 - 100, 320, 240)];
+	UIAlertSheet *alertSheet = [[UIAlertSheet alloc] initWithFrame:CGRectMake(0, 0, 320, 480)];
 	[alertSheet setBodyText:@"-"];
 	
 	m_pVolumeSlider = [[UISliderControl alloc] initWithFrame:CGRectMake(10, 5, 300, 15)];
@@ -286,9 +288,9 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	[m_pVolumeSlider addTarget:self action:@selector(changeVolume) forEvents:1|4]; // mouseDown | mouseDragged
 	[alertSheet addSubview:m_pVolumeSlider];
 	
-	[alertSheet addButtonWithTitle:@"Close"];
+	[alertSheet addButtonWithTitle:@"Hide"];
 	[alertSheet setDelegate:self];
-	[alertSheet presentSheetFromAboveView:m_pMainView];
+	[alertSheet presentSheetFromAboveView:m_pPlaylistView];
 }
 
 
@@ -359,9 +361,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showPlaylistViewWithTransition:(int)trans
 {
 	if (!m_pPlaylistView) {
-		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
-		rect.origin.x = rect.origin.y = 0.0f;
-		m_pPlaylistView = [[PlaylistView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		m_pPlaylistView = [[PlaylistView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
 		[m_pPlaylistView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = TRUE;
@@ -372,9 +372,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showArtistsViewWithTransition:(int)trans
 {
 	if (!m_pArtistsView) {
-		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
-		rect.origin.x = rect.origin.y = 0.0f;
-		m_pArtistsView = [[ArtistsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		m_pArtistsView = [[ArtistsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
 		[m_pArtistsView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;
@@ -386,9 +384,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showAlbumsViewWithTransition:(int)trans artist:(NSString *)name
 {
 	if (!m_pAlbumsView) {
-		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
-		rect.origin.x = rect.origin.y = 0.0f;
-		m_pAlbumsView = [[AlbumsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		m_pAlbumsView = [[AlbumsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
 		[m_pAlbumsView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;
@@ -400,14 +396,23 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showSongsViewWithTransition:(int)trans album:(NSString *)albumname artist:(NSString *)name
 {
 	if (!m_pSongsView) {
-		struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
-		rect.origin.x = rect.origin.y = 0.0f;
-		m_pSongsView = [[SongsView alloc] initWithFrame:CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)];
+		m_pSongsView = [[SongsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
 		[m_pSongsView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;
 	[m_pSongsView ShowSongs:albumname artist:name];
 	[m_pTransitionView transition:trans toView:m_pSongsView];
+}
+
+
+- (void)showSearchViewWithTransition:(int)trans
+{
+	if (!m_pSearchView) {
+		m_pSearchView = [[SearchView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		[m_pSearchView Initialize:self mpd:m_pMPD];
+	}
+	m_ShowPlaylist = FALSE;
+	[m_pTransitionView transition:trans toView:m_pSearchView];
 }
 
 @end

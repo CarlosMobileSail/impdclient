@@ -54,7 +54,7 @@
 	m_pAlbums = [[NSMutableArray alloc] init];
 
 	// Create the table.
-	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
+	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
 	[self addSubview: m_pTable]; 
 	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
 	[m_pTable addTableColumn: col]; 
@@ -64,7 +64,7 @@
 	[m_pTable setRowHeight:42.0f];
 
 	// Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
+	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
 	[nav showLeftButton:@"Artists" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
 	[nav setBarStyle: 1];	// Dark style.
 	[nav setDelegate:self];

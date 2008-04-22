@@ -23,7 +23,6 @@
 
 #import <UIKit/UIKit.h>
 #import <UIKit/UIApplication.h>
-#import <UIKit/UISliderControl.h>
 
 #import "libmpd/libmpd.h"
 
@@ -31,10 +30,16 @@
 // Forward declarations.
 //////////////////////////////////////////////////////////////////////////
 
+@class UISliderControl;
 @class PlaylistView;
 @class ArtistsView;
 @class AlbumsView;
 @class SongsView;
+@class SearchView;
+
+#define NAVBARHEIGHT	48
+#define BUTTONBARHEIGHT	50
+#define MAXHEIGHT		480 - 20 - NAVBARHEIGHT - BUTTONBARHEIGHT	// Screenheight - title - navbar - buttonbar.
 
 //////////////////////////////////////////////////////////////////////////
 // MPDClientApplication: class definition.
@@ -49,6 +54,7 @@
 	ArtistsView* m_pArtistsView;
 	AlbumsView* m_pAlbumsView;
 	SongsView* m_pSongsView;
+	SearchView* m_pSearchView;
 
 	UIButtonBar* m_pButtonBar;
 	BOOL m_ShowPlaylist;
@@ -70,6 +76,7 @@
 - (void)showArtistsViewWithTransition:(int)trans;
 - (void)showAlbumsViewWithTransition:(int)trans artist:(NSString *)name;
 - (void)showSongsViewWithTransition:(int)trans album:(NSString *)albumname artist:(NSString *)name;
+- (void)showSearchViewWithTransition:(int)trans;
 @end
 
 //////////////////////////////////////////////////////////////////////////

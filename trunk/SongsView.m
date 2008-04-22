@@ -61,7 +61,7 @@
 	m_pSongs = [[NSMutableArray alloc] init];
 
 	// Create the table.
-	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0.0f, 48.0f, 320.0f, 480.0f - 16.0f - 32.0f - 50.0f)];
+	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
 	[self addSubview: m_pTable]; 
 	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
 	[m_pTable addTableColumn: col]; 
@@ -71,7 +71,7 @@
 	[m_pTable setRowHeight:42.0f];
 
 	// Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0.0f, 0.0f, 320.0f, 48.0f)];
+	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
 	[nav showLeftButton:@"Albums" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
 	[nav setBarStyle: 1];	// Dark style.
 	[nav setDelegate:self];
@@ -162,23 +162,40 @@
 
 - (void)tableRowSelected:(NSNotification*)notification 
 {
-	// Get selected cell and song name.
-	SongTableCell* pCell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
-	NSLog(@"Selected song: %@", [pCell title]);
-	[pCell setSelected:FALSE withFade:TRUE];
-	// Add all songs?
-	if ([[notification object] selectedRow] == 0) {
-		int i;
-		for (i = 1;i < [m_pSongs count];i++) {
-			pCell = [m_pSongs objectAtIndex:i];
+	// Alert sheet attached to bottom of screen.
+	UIAlertSheet *alertSheet = [[UIAlertSheet alloc] initWithFrame:CGRectMake(0, 0, 320, 480)];
+	[alertSheet setBodyText:@"Add song(s) to the playlist?"];
+	[alertSheet addButtonWithTitle:@"Yes"];
+	[alertSheet addButtonWithTitle:@"No"];
+	[alertSheet setDelegate:self];
+	[alertSheet presentSheetFromAboveView:self];
+}
+
+
+- (void)alertSheet:(UIAlertSheet*)sheet buttonClicked:(int)button
+{
+	if (button == 1) {
+		// Get selected cell and song name.
+		SongTableCell* pCell = [m_pTable cellAtRow:[m_pTable selectedRow] column:0];
+		NSLog(@"Selected song: %@", [pCell title]);
+		// Anwer of the clear question is yes: add the song(s) to the list.
+		if ([m_pTable selectedRow] == 0) {
+			// Add all songs.
+			int i;
+			for (i = 1;i < [m_pSongs count];i++) {
+				pCell = [m_pSongs objectAtIndex:i];
+				mpd_playlist_queue_add(m_pMPD, pCell->m_Path);
+			}
+		} else {
+			[pCell setSelected:FALSE withFade:TRUE];
 			mpd_playlist_queue_add(m_pMPD, pCell->m_Path);
 		}
-	} else
-		mpd_playlist_queue_add(m_pMPD, pCell->m_Path);
-	// Flush the queue.
-	mpd_playlist_queue_commit(m_pMPD);
-	// Go back to the album view.
-	[m_pApp showAlbumsViewWithTransition:2 artist:m_pArtistName];
+		// Flush the queue.
+		mpd_playlist_queue_commit(m_pMPD);
+		// Go back to the album view.
+		[m_pApp showAlbumsViewWithTransition:2 artist:m_pArtistName];
+	}
+	[sheet dismiss];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table

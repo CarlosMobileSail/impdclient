@@ -25,8 +25,6 @@
 #import <Foundation/NSDictionary.h>
 #import <UIKit/UIKit.h>
 #import <UIKit/UIApplication.h>
-#import <UIKit/UITextLabel.h>
-#import <UIKit/UITableCell.h>
 
 #import "libmpd/libmpd.h"
 
@@ -37,28 +35,29 @@
 @class MPDClientApplication;
 
 //////////////////////////////////////////////////////////////////////////
-// PlaylistTableCell: class definition.
+// SearchTableCell: class definition.
 //////////////////////////////////////////////////////////////////////////
 
-@interface PlaylistTableCell : UITableCell
+@interface SearchTableCell : UIImageAndTextTableCell
 {
-	UITextLabel *song_name;
-	UITextLabel *artist_name;
-	UIImageView* play_image;
+	UITextLabel* song_name;
+	UITextLabel* artist_name;
+	
+@public
+	char m_Path[256];
 }
 - (id) initWithSong: (NSDictionary *)song;
 @end
 
-
 //////////////////////////////////////////////////////////////////////////
-// PlaylistView: class definition.
+// SearchView: class definition.
 //////////////////////////////////////////////////////////////////////////
 
-@interface PlaylistView : UIView
+@interface SearchView : UIView
 {
 	UINavigationBar* m_pNavigationBar;
-	UINavigationItem* m_pTitle;
-	BOOL m_Editing;
+	UIKeyboard* m_pKeyboard;
+	BOOL m_KeyboardVisible;
 
 	MpdObj* m_pMPD;
 	MPDClientApplication* m_pApp;
@@ -69,7 +68,6 @@
 - (id)initWithFrame:(struct CGRect)frame;
 - (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
 
-- (void)ShowPlaylist;
-- (void)UpdateTitle;
-- (void)StartPlaySelected:(id)sender;
+- (void)ShowKeyboard;
+- (void)HideKeyboard;
 @end
