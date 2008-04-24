@@ -37,9 +37,10 @@
 @class SongsView;
 @class SearchView;
 
+#define TITLEHEIGHT		19
 #define NAVBARHEIGHT	48
 #define BUTTONBARHEIGHT	50
-#define MAXHEIGHT		480 - 20 - NAVBARHEIGHT - BUTTONBARHEIGHT	// Screenheight - title - navbar - buttonbar.
+#define MAXHEIGHT		480 - TITLEHEIGHT - NAVBARHEIGHT - BUTTONBARHEIGHT	// Screenheight - title - navbar - buttonbar.
 
 //////////////////////////////////////////////////////////////////////////
 // MPDClientApplication: class definition.
@@ -47,7 +48,10 @@
 
 @interface MPDClientApplication :  UIApplication
 {
+@public
 	UIView* m_pMainView;
+
+@protected
 	UITransitionView* m_pTransitionView;
 	UISliderControl* m_pVolumeSlider;
 	PlaylistView* m_pPlaylistView;

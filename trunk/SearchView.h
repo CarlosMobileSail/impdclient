@@ -46,8 +46,9 @@
 @public
 	char m_Path[256];
 }
-- (id) initWithSong: (NSDictionary *)song;
+- (id)initWithSong:(NSString *)song artist:(NSString *)artistinfo;
 @end
+
 
 //////////////////////////////////////////////////////////////////////////
 // SearchView: class definition.
@@ -56,6 +57,7 @@
 @interface SearchView : UIView
 {
 	UINavigationBar* m_pNavigationBar;
+	UISearchField* m_pSearchBox;
 	UIKeyboard* m_pKeyboard;
 	BOOL m_KeyboardVisible;
 
@@ -68,6 +70,7 @@
 - (id)initWithFrame:(struct CGRect)frame;
 - (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
 
+- (void)KeyboardReturnPressed;
 - (void)ShowKeyboard;
 - (void)HideKeyboard;
 @end

@@ -1,5 +1,5 @@
 CC=/usr/local/bin/arm-apple-darwin-gcc
-CFLAGS=-Wall
+CFLAGS=-Wall -I/usr/local/arm-apple-darwin/include/Foundation
 
 LD=$(CC)
 LDFLAGS = -framework CoreFoundation \
