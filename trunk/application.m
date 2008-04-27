@@ -268,7 +268,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)changeVolume
 {
 	int volume = [m_pVolumeSlider value];
-	NSLog(@"Change volume %d", volume);
+//	NSLog(@"Change volume %d", volume);
 	mpd_status_set_volume(m_pMPD, volume);
 }
 

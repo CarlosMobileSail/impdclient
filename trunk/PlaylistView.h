@@ -27,6 +27,7 @@
 #import <UIKit/UIApplication.h>
 #import <UIKit/UITextLabel.h>
 #import <UIKit/UITableCell.h>
+#import <GraphicsServices/GraphicsServices.h>		// For GSEvent.
 
 #import "libmpd/libmpd.h"
 
@@ -42,13 +43,29 @@
 
 @interface PlaylistTableCell : UITableCell
 {
-	UITextLabel *song_name;
-	UITextLabel *artist_name;
+	UITextLabel* song_name;
+	UITextLabel* artist_name;
 	UIImageView* play_image;
+	
+@public
+	int m_SongID;
 }
-- (id) initWithSong: (NSDictionary *)song;
+- (id) initWithSong:(NSString *)song artist:(NSString *)artistinfo current:(BOOL)bCurrent;
 @end
 
+//////////////////////////////////////////////////////////////////////////
+// PlaylistTable: class definition.
+//////////////////////////////////////////////////////////////////////////
+
+@interface PlaylistTable : UITable
+{
+	struct timeval last;
+	int lastClickX;
+	int lastClickY;
+}
+- (void)Initialize;
+- (void)mouseUp:(GSEvent *)event;
+@end
 
 //////////////////////////////////////////////////////////////////////////
 // PlaylistView: class definition.
@@ -64,12 +81,12 @@
 	MPDClientApplication* m_pApp;
 	
 	NSMutableArray* m_pSongs;
-	UITable* m_pTable;
+	PlaylistTable* m_pTable;
 }
 - (id)initWithFrame:(struct CGRect)frame;
 - (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
 
 - (void)ShowPlaylist;
 - (void)UpdateTitle;
-- (void)StartPlaySelected:(id)sender;
+- (void)doubleTap:(id)sender;
 @end

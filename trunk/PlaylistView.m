@@ -38,7 +38,7 @@
 
 @implementation PlaylistTableCell
 
-- (id) initWithSong: (NSDictionary *)song
+- (id)initWithSong:(NSString *)song artist:(NSString *)artistinfo current:(BOOL)bCurrent
 {
 	self = [super init];
 	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(36, 3, 260, 29)];
@@ -48,18 +48,18 @@
 	float c[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float h[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	
-	[song_name setText: [song objectForKey: @"SONG"]];
-	[song_name setFont: [UIImageAndTextTableCell defaultTitleFont]];
-	[song_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[song_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
+	[song_name setText:song];
+	[song_name setFont:[UIImageAndTextTableCell defaultTitleFont]];
+	[song_name setBackgroundColor:CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
+	[song_name setHighlightedColor:CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
 	
-	[artist_name setText: [song objectForKey: @"ARTIST"]];
-	[artist_name setFont: [UIDateLabel defaultFont]];
-	[artist_name setColor: CGColorCreateCopyWithAlpha([artist_name color], 0.4f)];
-	[artist_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[artist_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
+	[artist_name setText:artistinfo];
+	[artist_name setFont:[UIDateLabel defaultFont]];
+	[artist_name setColor:CGColorCreateCopyWithAlpha([artist_name color], 0.4f)];
+	[artist_name setBackgroundColor:CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
+	[artist_name setHighlightedColor:CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
 
-	if ([song objectForKey: @"CURRENT"] == @"1")
+	if (bCurrent)
 		[play_image setImage:[UIImage applicationImageNamed:@"resources/play_small.png"]];
 
 	[self addSubview: artist_name];
@@ -75,6 +75,51 @@
 	[play_image setHighlighted: selected];
 	
 	[super drawContentInRect: rect selected: selected];
+}
+
+@end
+
+//////////////////////////////////////////////////////////////////////////
+// PlaylistTable: implementation.
+//////////////////////////////////////////////////////////////////////////
+
+@implementation PlaylistTable
+
+- (void)Initialize
+{
+	lastClickX = -1;
+	lastClickY = -1;
+	last.tv_sec = 0;
+	last.tv_usec = 0;
+}
+
+
+- (double)getTimeDifference
+{
+	struct timezone tz;
+	struct timeval tv;
+	struct timeval dt;
+	// Get the time of day.
+	gettimeofday(&tv, &tz);
+	// Determine the difference.
+	dt.tv_sec = tv.tv_sec - last.tv_sec;
+	dt.tv_usec = tv.tv_usec - last.tv_usec;
+	last.tv_sec = tv.tv_sec;
+	last.tv_usec = tv.tv_usec;
+	return (double)dt.tv_sec + (double)dt.tv_usec * 0.000001l;
+}
+
+- (void)mouseUp:(GSEvent *)event
+{
+	CGPoint p = GSEventGetLocationInWindow(event);
+	if (([self getTimeDifference] <= 0.5) && (lastClickX <= (p.x + 10)) && (lastClickX >= (p.x - 10))  && (lastClickY <= (p.y + 10)) && (lastClickY >= (p.y - 10))) {
+		[_delegate doubleTap:self];
+	} else {
+		lastClickX = p.x;
+		lastClickY = p.y;
+	}
+	// Call the base class.
+	[super mouseUp:event];
 }
 
 @end
@@ -102,7 +147,8 @@
 	// Create the storage array for the songs.
 	m_pSongs = [[NSMutableArray alloc] init];
 	// Create the table.
-	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
+	m_pTable = [[PlaylistTable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
+	[m_pTable Initialize];
 	[self addSubview: m_pTable]; 
 
 	[m_pTable setRowHeight:56.0f];
@@ -138,7 +184,7 @@
 	// Clear the songs array.
 	[m_pSongs removeAllObjects];
 	// Get the current song id, if any.
-	int current_id = -1;
+	int current_id = -1, row = 0, current_row = -1;
 	mpd_Song* pSong = mpd_playlist_get_current_song(m_pMPD);
 	if (pSong)
 		current_id = pSong->id;
@@ -147,14 +193,18 @@
 	if (data) {
 		do {
 			if (data->type == MPD_DATA_TYPE_SONG) {
-				// Create song object.
-				NSMutableDictionary* song = [[NSMutableDictionary alloc] init];
-				[song setObject:[NSString stringWithCString: data->song->title] forKey:@"SONG"];
-				[song setObject:[NSString stringWithFormat: @"%s, %s", data->song->artist, data->song->album] forKey:@"ARTIST"];
-				[song setObject:(current_id == data->song->id ? @"1" : @"0") forKey:@"CURRENT"];
-				[song autorelease];
+				// Is this the current song?
+				if (current_id == data->song->id)
+					current_row = row;
+				// Create the new song.
+				NSString* song = [NSString stringWithCString: data->song->title];
+				int length = data->song->time;
+				NSString* info = [NSString stringWithFormat: @"%s, %s (%d:%02d)", data->song->artist, data->song->album, length / 60, length % 60];
+				PlaylistTableCell* pCell = [[PlaylistTableCell alloc] initWithSong:song artist:info current:(current_id == data->song->id)];
+				pCell->m_SongID = data->song->id;
 				// Add the song object to the array.
-				[m_pSongs addObject:song];
+				[m_pSongs addObject:pCell];
+				row++;
 			}
 			// Go to the next entry.
 			data = mpd_data_get_next(data);
@@ -163,6 +213,9 @@
 		NSLog(@"No data found");
 	// Update the table contents.
 	[m_pTable reloadData];
+	// Scroll to the current song?
+	if (current_row != -1)
+		[m_pTable scrollRowToVisible:current_row];
 }
 
 
@@ -172,12 +225,6 @@
 	int elapsedTime = mpd_status_get_elapsed_song_time(m_pMPD);
 	NSString* str = [NSString stringWithFormat:@"%d:%02d - %d:%02d", elapsedTime / 60, elapsedTime % 60, totalTime / 60, totalTime % 60];
 	[m_pTitle setTitle: str]; 
-}
-
-
-- (void)StartPlaySelected:(id)sender
-{
-	NSLog(@"Double tap detected!");
 }
 
 //  --- DELEGATE METHODS -----------------------------------------------
@@ -214,6 +261,14 @@
 	[sheet dismiss];
 }
 
+- (void)doubleTap:(id)sender
+{
+	NSLog(@"Double tap detected!");
+	// Get the selected row and start playing that song.
+	PlaylistTableCell* pCell = [m_pTable cellAtRow:[m_pTable selectedRow] column:0];
+	mpd_player_play_id(m_pMPD, pCell->m_SongID);
+}
+
 - (int) numberOfRowsInTable: (UITable *)table
 {
 	return [m_pSongs count];
@@ -221,8 +276,7 @@
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-	PlaylistTableCell *cell = [[PlaylistTableCell alloc] initWithSong: [m_pSongs objectAtIndex: row]];
-	return cell;
+	return [m_pSongs objectAtIndex:row];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing
