@@ -30,12 +30,12 @@
 // Forward declarations.
 //////////////////////////////////////////////////////////////////////////
 
-@class UISliderControl;
 @class PlaylistView;
 @class ArtistsView;
 @class AlbumsView;
 @class SongsView;
 @class SearchView;
+@class PreferencesView;
 
 #define TITLEHEIGHT		19
 #define NAVBARHEIGHT	48
@@ -53,15 +53,16 @@
 
 @protected
 	UITransitionView* m_pTransitionView;
-	UISliderControl* m_pVolumeSlider;
 	PlaylistView* m_pPlaylistView;
 	ArtistsView* m_pArtistsView;
 	AlbumsView* m_pAlbumsView;
 	SongsView* m_pSongsView;
 	SearchView* m_pSearchView;
+	PreferencesView* m_pPreferencesView;
 
 	UIButtonBar* m_pButtonBar;
 	BOOL m_ShowPlaylist;
+	BOOL m_ShowPreferences;
 	BOOL m_Connected;
 	int m_ReconnectCount;
 
@@ -73,7 +74,6 @@
 - (void)UpdateTitle;
 - (void)ShowPlaylist;
 - (void)UpdateButtonBar;
-- (void)ShowVolumeDialog;
 - (id)timertick: (NSTimer *)timer;
 
 - (void)showPlaylistViewWithTransition:(int)trans;
@@ -81,6 +81,7 @@
 - (void)showAlbumsViewWithTransition:(int)trans artist:(NSString *)name;
 - (void)showSongsViewWithTransition:(int)trans album:(NSString *)albumname artist:(NSString *)name;
 - (void)showSearchViewWithTransition:(int)trans;
+- (void)showPreferencesViewWithTransition:(int)trans;
 @end
 
 //////////////////////////////////////////////////////////////////////////

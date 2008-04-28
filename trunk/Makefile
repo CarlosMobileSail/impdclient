@@ -13,7 +13,7 @@ LDFLAGS = -framework CoreFoundation \
 
 all:	impdclient
 
-impdclient:	main.o application.o PlaylistView.o ArtistsView.o AlbumsView.o SongsView.o SearchView.o
+impdclient:	main.o application.o PlaylistView.o ArtistsView.o AlbumsView.o SongsView.o SearchView.o PreferencesView.o
 	$(LD) $(LDFLAGS) libmpd.a -o $@ $^
 
 %.o:	%.m
@@ -21,4 +21,3 @@ impdclient:	main.o application.o PlaylistView.o ArtistsView.o AlbumsView.o Songs
 
 clean:
 		rm -f *.o *~ impdclient
-

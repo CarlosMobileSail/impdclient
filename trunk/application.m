@@ -23,11 +23,9 @@
  
 #import <CoreFoundation/CoreFoundation.h>
 #import <Foundation/Foundation.h>
-#import <UIKit/CDStructures.h>
 #import <UIKit/UINavigationBar.h>
 #import <UIKit/UIWindow.h>
 #import <UIKit/UIHardware.h>
-#import <UIKit/UISliderControl.h>
 
 #import "application.h"
 #import "PlaylistView.h"
@@ -35,6 +33,7 @@
 #import "AlbumsView.h"
 #import "SongsView.h"
 #import "SearchView.h"
+#import "PreferencesView.h"
 
 //////////////////////////////////////////////////////////////////////////
 // MPD: callback functions.
@@ -136,7 +135,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		self, kUIButtonBarButtonTarget,
 		(bIsPlaying ? @"Pause" : @"Play"), kUIButtonBarButtonTitle,
 		@"0", kUIButtonBarButtonType,
-		nil 
+		nil
 	],
 	[ NSDictionary dictionaryWithObjectsAndKeys:
 		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
@@ -146,7 +145,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		self, kUIButtonBarButtonTarget,
 		@"Previous", kUIButtonBarButtonTitle,
 		@"0", kUIButtonBarButtonType,
-		nil 
+		nil
 	],
 	[ NSDictionary dictionaryWithObjectsAndKeys:
 		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
@@ -156,17 +155,17 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		self, kUIButtonBarButtonTarget,
 		@"Next", kUIButtonBarButtonTitle,
 		@"0", kUIButtonBarButtonType,
-		nil 
-		],
+		nil
+	],
 	[ NSDictionary dictionaryWithObjectsAndKeys:
 		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
-		@"resources/volume.png", kUIButtonBarButtonInfo,
-		@"resources/volume.png", kUIButtonBarButtonSelectedInfo,
+		@"resources/settings.png", kUIButtonBarButtonInfo,
+		@"resources/settings.png", kUIButtonBarButtonSelectedInfo,
 		[ NSNumber numberWithInt: 4], kUIButtonBarButtonTag,
 		self, kUIButtonBarButtonTarget,
-		@"Volume", kUIButtonBarButtonTitle,
+		@"Settings", kUIButtonBarButtonTitle,
 		@"0", kUIButtonBarButtonType,
-		nil 
+		nil
 	],
 	[ NSDictionary dictionaryWithObjectsAndKeys:
 		@"buttonBarItemTapped:", kUIButtonBarButtonAction,
@@ -176,7 +175,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		self, kUIButtonBarButtonTarget,
 		@"Add", kUIButtonBarButtonTitle,
 		@"0", kUIButtonBarButtonType,
-		nil 
+		nil
 		],
 	nil
 	];
@@ -204,8 +203,11 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		mpd_player_next(m_pMPD);
 		break;
 	case 4:
-		NSLog(@"Volume");
-		[self ShowVolumeDialog];
+		NSLog(@"Preferences");
+		if (m_ShowPreferences)
+			[self showPlaylistViewWithTransition:5];
+		else
+			[self showPreferencesViewWithTransition:4];
 		break;
 	case 5:
 		NSLog(@"Add");
@@ -229,7 +231,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	[buttonBar setBarStyle:1];
 	[buttonBar setButtonBarTrackingMode: 2];
 
-	int buttons[5] = { 1, 2, 3, 4, 5};
+	int buttons[6] = { 1, 2, 3, 4, 5};
 	[buttonBar registerButtonGroup:0 withButtons:buttons withCount: 5];
 	[buttonBar showButtonGroup: 0 withDuration: 0.0f];
 	return buttonBar;
@@ -262,42 +264,6 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 {
 	if (m_pPlaylistView)
 		[m_pPlaylistView ShowPlaylist]; 
-}
-
-
-- (void)changeVolume
-{
-	int volume = [m_pVolumeSlider value];
-//	NSLog(@"Change volume %d", volume);
-	mpd_status_set_volume(m_pMPD, volume);
-}
-
-
-- (void)ShowVolumeDialog
-{
-	int volume = mpd_status_get_volume(m_pMPD);
-	// Create the alert sheet.
-	UIAlertSheet *alertSheet = [[UIAlertSheet alloc] initWithFrame:CGRectMake(0, 0, 320, 480)];
-	[alertSheet setBodyText:@"-"];
-	
-	m_pVolumeSlider = [[UISliderControl alloc] initWithFrame:CGRectMake(10, 5, 300, 15)];
-	[m_pVolumeSlider setMinValue:0.0];
-	[m_pVolumeSlider setMaxValue:100.0];
-	[m_pVolumeSlider setValue: volume];
-	[m_pVolumeSlider setShowValue:YES];
-	[m_pVolumeSlider addTarget:self action:@selector(changeVolume) forEvents:1|4]; // mouseDown | mouseDragged
-	[alertSheet addSubview:m_pVolumeSlider];
-	
-	[alertSheet addButtonWithTitle:@"Hide"];
-	[alertSheet setDelegate:self];
-	[alertSheet presentSheetFromAboveView:m_pPlaylistView];
-}
-
-
-- (void)alertSheet:(UIAlertSheet*)sheet buttonClicked:(int)button
-{
-	if (button == 1)
-		[sheet dismiss];
 }
 
 
@@ -365,6 +331,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		[m_pPlaylistView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = TRUE;
+	m_ShowPreferences = FALSE;
 	[m_pTransitionView transition:trans toView:m_pPlaylistView];
 }
 
@@ -413,6 +380,18 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	}
 	m_ShowPlaylist = FALSE;
 	[m_pTransitionView transition:trans toView:m_pSearchView];
+}
+
+
+- (void)showPreferencesViewWithTransition:(int)trans
+{
+	if (!m_pPreferencesView) {
+		m_pPreferencesView = [[PreferencesView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		[m_pPreferencesView Initialize:self mpd:m_pMPD];
+	}
+	m_ShowPlaylist = FALSE;
+	m_ShowPreferences = TRUE;
+	[m_pTransitionView transition:trans toView:m_pPreferencesView];
 }
 
 @end
