@@ -59,4 +59,5 @@
 
 - (id)initWithFrame:(struct CGRect)frame;
 - (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
+- (void)SaveSettings;
 @end

@@ -83,6 +83,81 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 
 @implementation MPDClientApplication
 
+- (void)applicationDidFinishLaunching: (id) unused
+{
+	// Clear the pointers.
+	m_pMPD = NULL;
+	m_pPlaylistView = NULL;
+	m_pArtistsView = NULL;
+	m_pAlbumsView = NULL;
+	m_pSongsView = NULL;
+	m_pSearchView = NULL;
+	m_pPreferencesView = NULL;
+	
+	struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
+	rect.origin.x = rect.origin.y = 0.0f;
+	m_pWindow = [[UIWindow alloc] initWithContentRect: rect];
+	m_pTransitionView = [[UITransitionView alloc] initWithFrame:rect];
+	m_pMainView = [[UIView alloc] initWithFrame:rect];
+	[m_pWindow orderFront: self];
+	[m_pWindow makeKey: self];
+	[m_pWindow _setHidden: NO];
+	[m_pWindow setContentView: m_pMainView];
+	[m_pMainView addSubview:m_pTransitionView];
+
+	// Create the button bar.
+	m_pButtonBar = [ [ UIButtonBar alloc ]
+		initInView: m_pMainView
+		withFrame: CGRectMake(0, 410, 320, BUTTONBARHEIGHT)
+		withItemList: [ self buttonBarItems ] ];
+	[m_pButtonBar setDelegate:self];
+	[m_pButtonBar setBarStyle:1];
+	[m_pButtonBar setButtonBarTrackingMode: 2];
+	int buttons[6] = { 1, 2, 3, 4, 5};
+	[m_pButtonBar registerButtonGroup:0 withButtons:buttons withCount: 5];
+	[m_pButtonBar showButtonGroup: 0 withDuration: 0.0f];
+	[m_pMainView addSubview: m_pButtonBar];
+
+	// Create a timer (every 0.2 seconds).
+	double tickIntervalM = 0.2;
+	m_pTimer = [NSTimer scheduledTimerWithTimeInterval: tickIntervalM
+				target: self
+				selector: @selector(timertick:)
+				userInfo: nil
+				repeats: YES];
+
+	// Open a connection to the server.
+	[self open_connection];
+	// Show the playlist view?
+	if (m_Connected)
+		[self showPlaylistViewWithTransition:1];
+	else {
+		// Show the settings screen.
+		[self showPreferencesViewWithTransition:4];
+	}
+}
+
+
+- (void)dealloc
+{
+	// Release all objects.
+	[m_pTimer release];
+	[m_pButtonBar release];
+	[m_pMainView release];
+	[m_pTransitionView release];
+	[m_pWindow release];
+	// Release all views.
+	[m_pPlaylistView release];
+	[m_pArtistsView release];
+	[m_pAlbumsView release];
+	[m_pSongsView release];
+	[m_pSearchView release];
+	[m_pPreferencesView release];
+	// Call the base class.
+	[super dealloc];
+}
+
+
 - (void)applicationWillTerminate:(NSNotification *)notification
 {
 	if (m_pMPD)
@@ -97,22 +172,37 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	[self applicationWillTerminate:nil];
 }
 
+//////////////////////////////////////////////////////////////////////////
+// libmpd: related functions.
+//////////////////////////////////////////////////////////////////////////
 
 - (void)open_connection
 {
-//	debug_set_output(stdout);
-//	debug_set_level(4);			// DEBUG_INFO + 1
-	
 	// Create mpd object?
 	if (!m_pMPD) {
-		m_pMPD = mpd_new("192.168.2.2", 6600, NULL);
+		m_pMPD = mpd_new_default();
 		// Connect signals.
 		mpd_signal_connect_error(m_pMPD, (ErrorCallback)error_callback, self);
 		mpd_signal_connect_status_changed(m_pMPD, (StatusChangedCallback)status_changed, self);
 		// Set timeout
 		mpd_set_connection_timeout(m_pMPD, 10);
 	}
-	NSLog(@"opening connection to mpd");
+	// Get the settings from the user defaults.
+	NSUserDefaults* pDefaults = [NSUserDefaults standardUserDefaults];
+	NSString* hostname = [pDefaults stringForKey:@"hostname"];
+	int serverport = [pDefaults integerForKey:@"port"];
+	if (!hostname) {
+		// Set the initial value.
+		hostname = @"192.168.2.2";
+		serverport = 6600;
+		// Save the default values.
+		[pDefaults setObject:hostname forKey:@"hostname"];
+		[pDefaults setInteger:serverport forKey:@"port"];
+	}
+	// Open the connection to the server.
+	NSLog(@"Opening connection to server: '%@', %i", hostname, serverport);
+	mpd_set_hostname(m_pMPD, (char *)[hostname cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	mpd_set_port(m_pMPD, serverport);
 	// Try to connect.
 	if (mpd_connect(m_pMPD) == MPD_OK) {
 		m_Connected = TRUE;
@@ -121,6 +211,9 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		m_Connected = FALSE;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Buttonbar: related functions.
+//////////////////////////////////////////////////////////////////////////
 
 - (NSArray *)buttonBarItems 
 {
@@ -204,37 +297,22 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		break;
 	case 4:
 		NSLog(@"Preferences");
-		if (m_ShowPreferences)
+		if (m_ShowPreferences) {
+			[m_pPreferencesView SaveSettings];
 			[self showPlaylistViewWithTransition:5];
-		else
+		} else
 			[self showPreferencesViewWithTransition:4];
 		break;
 	case 5:
 		NSLog(@"Add");
+		if (m_ShowPreferences)
+			[m_pPreferencesView SaveSettings];
 		if (m_ShowPlaylist)
 			[self showArtistsViewWithTransition:1];
 		else
 			[self showPlaylistViewWithTransition:2];
 		break;
 	}
-}
-
-
-- (UIButtonBar *)createButtonBar 
-{
-	UIButtonBar *buttonBar;
-	buttonBar = [ [ UIButtonBar alloc ] 
-		initInView: m_pMainView
-		withFrame: CGRectMake(0, 410, 320, BUTTONBARHEIGHT)
-		withItemList: [ self buttonBarItems ] ];
-	[buttonBar setDelegate:self];
-	[buttonBar setBarStyle:1];
-	[buttonBar setButtonBarTrackingMode: 2];
-
-	int buttons[6] = { 1, 2, 3, 4, 5};
-	[buttonBar registerButtonGroup:0 withButtons:buttons withCount: 5];
-	[buttonBar showButtonGroup: 0 withDuration: 0.0f];
-	return buttonBar;
 }
 
 
@@ -247,6 +325,9 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 	[ [ m_pButtonBar viewWithTag:tagNumber ]  setImage:image];
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Other functions.
+//////////////////////////////////////////////////////////////////////////
 
 - (void)UpdateTitle
 {
@@ -271,7 +352,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 {
 	// Service the mpd status handler.
 	if (m_pMPD) {
-		if (mpd_status_update(m_pMPD) == MPD_NOT_CONNECTED) {
+		if (mpd_status_update(m_pMPD) == MPD_NOT_CONNECTED && !m_ShowPreferences) {
 			m_ReconnectCount++;
 			if (m_ReconnectCount > 20 || m_Connected) {
 				// Try to reconnect once every 5 seconds.
@@ -283,51 +364,10 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 }
 
 
-- (void)applicationDidFinishLaunching: (id) unused
-{
-    UIWindow *window;
-
-	// Clear the pointers.
-	m_pMPD = NULL;
-	m_pPlaylistView = NULL;
-	m_pArtistsView = NULL;
-	m_pAlbumsView = NULL;
-	m_pSongsView = NULL;
-	
-	struct CGRect rect = [UIHardware fullScreenApplicationContentRect];
-	rect.origin.x = rect.origin.y = 0.0f;
-	window = [[UIWindow alloc] initWithContentRect: rect];
-	m_pTransitionView = [[UITransitionView alloc] initWithFrame:rect];
-	m_pMainView = [[UIView alloc] initWithFrame:rect];
-	[window orderFront: self];
-	[window makeKey: self];
-	[window _setHidden: NO];
-	[window setContentView: m_pMainView];
-	[m_pMainView addSubview:m_pTransitionView];
-
-	// Create the button bar.
-	m_pButtonBar = [ self createButtonBar ];
-	[m_pMainView addSubview: m_pButtonBar];
-
-	// Create a timer (every 0.2 seconds).
-	double tickIntervalM = 0.2;
-	m_pTimer = [NSTimer scheduledTimerWithTimeInterval: tickIntervalM
-				target: self
-				selector: @selector(timertick:)
-				userInfo: nil
-				repeats: YES];
-
-	// Open a connection to the server.
-	[self open_connection];
-	// Show the playlist view.
-	[self showPlaylistViewWithTransition:1];
-}
-
-
 - (void)showPlaylistViewWithTransition:(int)trans
 {
 	if (!m_pPlaylistView) {
-		m_pPlaylistView = [[PlaylistView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		m_pPlaylistView = [[PlaylistView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT + BUTTONBARHEIGHT)];
 		[m_pPlaylistView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = TRUE;
@@ -339,7 +379,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showArtistsViewWithTransition:(int)trans
 {
 	if (!m_pArtistsView) {
-		m_pArtistsView = [[ArtistsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		m_pArtistsView = [[ArtistsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT + BUTTONBARHEIGHT)];
 		[m_pArtistsView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;
@@ -351,7 +391,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showAlbumsViewWithTransition:(int)trans artist:(NSString *)name
 {
 	if (!m_pAlbumsView) {
-		m_pAlbumsView = [[AlbumsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		m_pAlbumsView = [[AlbumsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT + BUTTONBARHEIGHT)];
 		[m_pAlbumsView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;
@@ -363,7 +403,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showSongsViewWithTransition:(int)trans album:(NSString *)albumname artist:(NSString *)name
 {
 	if (!m_pSongsView) {
-		m_pSongsView = [[SongsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		m_pSongsView = [[SongsView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT + BUTTONBARHEIGHT)];
 		[m_pSongsView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;
@@ -375,7 +415,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showSearchViewWithTransition:(int)trans
 {
 	if (!m_pSearchView) {
-		m_pSearchView = [[SearchView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		m_pSearchView = [[SearchView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT + BUTTONBARHEIGHT)];
 		[m_pSearchView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;
@@ -386,7 +426,7 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 - (void)showPreferencesViewWithTransition:(int)trans
 {
 	if (!m_pPreferencesView) {
-		m_pPreferencesView = [[PreferencesView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT)];
+		m_pPreferencesView = [[PreferencesView alloc] initWithFrame:CGRectMake(0, 0, 320, MAXHEIGHT + BUTTONBARHEIGHT)];
 		[m_pPreferencesView Initialize:self mpd:m_pMPD];
 	}
 	m_ShowPlaylist = FALSE;

@@ -52,6 +52,7 @@
 	UIView* m_pMainView;
 
 @protected
+	UIWindow* m_pWindow;
 	UITransitionView* m_pTransitionView;
 	PlaylistView* m_pPlaylistView;
 	ArtistsView* m_pArtistsView;
@@ -69,10 +70,13 @@
 	MpdObj* m_pMPD;
 	NSTimer* m_pTimer;
 }
+- (void)dealloc;
 - (void)cleanUp;
+
 - (void)open_connection;
 - (void)UpdateTitle;
 - (void)ShowPlaylist;
+- (NSArray *)buttonBarItems;
 - (void)UpdateButtonBar;
 - (id)timertick: (NSTimer *)timer;
 

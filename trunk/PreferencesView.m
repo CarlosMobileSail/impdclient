@@ -61,17 +61,22 @@
 	[m_pTable setDataSource:self];
 	[m_pTable setDelegate:self];
 	[m_pTable reloadData];
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(locationsUpdated:) name:@"HostnameUpdated" object:nil];
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(countriesUpdated:) name:@"PortUpdated" object:nil];
 	[self addSubview:m_pTable];
 	
+	// Get the hostname and port number.
+	NSUserDefaults* pDefaults = [NSUserDefaults standardUserDefaults];
+	NSString* hostname = [pDefaults stringForKey:@"hostname"];
+	int port = [pDefaults integerForKey:@"port"];
 	m_pHostnameCell = [[UIPreferencesTextTableCell alloc] initWithFrame:CGRectMake(0.0f, 48.0f, frame.size.width, 48.0f)];
 	[m_pHostnameCell setTitle:@"Hostname:"];
-	[m_pHostnameCell setValue:@"192.168.2.2"];
+	[[[m_pHostnameCell textField] textTraits] setAutoCapsType:0];
+	[m_pHostnameCell setValue:hostname];
 	
 	m_pPortCell = [[UIPreferencesTextTableCell alloc] initWithFrame:CGRectMake(0.0f, 48.0f, frame.size.width, 48.0f)];
 	[m_pPortCell setTitle:@"Port:"];
-	[m_pPortCell setValue:@"6600"];
+	[[[m_pPortCell textField] textTraits] setAutoCapsType:0];
+	[[[m_pPortCell textField] textTraits] setPreferredKeyboardType:2];		// numbers only.
+	[m_pPortCell setValue:[NSString stringWithFormat: @"%i", port]];
 
 	m_pVolumeCell = [[UIPreferencesTableCell alloc] init];
 	[m_pVolumeCell setTitle:@"Volume"];
@@ -81,13 +86,13 @@
 	[m_pVolumeSlider setMinValue:0.0];
 	[m_pVolumeSlider setMaxValue:100.0];
 	[m_pVolumeSlider setShowValue:YES];
-	[m_pVolumeSlider addTarget:self action:@selector(changeVolume) forEvents:1|4]; // mouseDown | mouseDragged
+	[m_pVolumeSlider addTarget:self action:@selector(ChangeVolume) forEvents:1|4]; // mouseDown | mouseDragged
 	[m_pVolumeCell addSubview:m_pVolumeSlider];
 	
 	return self;
 }
 
-- (void) dealloc
+- (void)dealloc
 {
 	[super dealloc];
 	
@@ -98,24 +103,25 @@
 	[m_pNavBar release];
 }
 
-- (void)countriesUpdated:(NSNotification *)notification
-{
-}
 
-- (void)locationsUpdated:(NSNotification *)notification
-{
-//	[_citycell setTitle:[[ms dataManager] getDefaultCountry]];
-//	[_citycell setValue:[[ms dataManager] getDefaultCity]];
-}
-
-- (void)changeVolume
+- (void)ChangeVolume
 {
 	int volume = [m_pVolumeSlider value];
-//	NSLog(@"Change volume %d", volume);
 	mpd_status_set_volume(m_pMPD, volume);
+	//	NSLog(@"Change volume %d", volume);
 }
 
-#pragma mark ---------------Datasource Methods---------------
+
+- (void)SaveSettings
+{
+	NSUserDefaults* pDefaults = [NSUserDefaults standardUserDefaults];
+	[pDefaults setObject:[m_pHostnameCell value] forKey:@"hostname"];
+	[pDefaults setInteger:[[m_pPortCell value] intValue] forKey:@"port"];
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Datasource Methods
+//////////////////////////////////////////////////////////////////////////
 
 - (int)numberOfGroupsInPreferencesTable:(UIPreferencesTable *)table
 {
@@ -166,38 +172,18 @@
 	return nil;
 }
 
-- (void)tableRowSelected:(NSNotification *)notification 
-{
-	int i = [m_pTable selectedRow];
-	switch (i){
-		case  1: 
-		{
-			[[m_pTable cellAtRow:i column:0] setSelected:YES];
-//			[ms  showEditKeywordViewWithTransition:1];
-			break;
-		}
-		case  3: 
-		{
-			[[m_pTable cellAtRow:i column:0] setSelected:YES];
-//			[ms  showDefaultCountryViewWithTransition:1];
-			break;
-		}
-		default:
-		{
-			[[m_pTable cellAtRow:i column:0] setSelected:NO];
-			break; 
-		}
-	}
-}
-
-#
-#pragma mark ---------------Navigation Methods---------------
+//////////////////////////////////////////////////////////////////////////
+// Navigation Methods
+//////////////////////////////////////////////////////////////////////////
 
 - (void)navigationBar:(UINavigationBar*)navbar buttonClicked:(int)button 
 {
 	NSLog(@"PreferencesView: button %d", button);
-	if (button == 1)
+	if (button == 1) {
 		[m_pApp showPlaylistViewWithTransition:5];
+		// Save the settings.
+		[self SaveSettings];
+	}
 }
 
 @end

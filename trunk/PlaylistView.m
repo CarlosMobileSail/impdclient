@@ -204,6 +204,7 @@
 				pCell->m_SongID = data->song->id;
 				// Add the song object to the array.
 				[m_pSongs addObject:pCell];
+				[pCell release];
 				row++;
 			}
 			// Go to the next entry.
