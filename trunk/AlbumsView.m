@@ -96,6 +96,8 @@
 				// Create album object and add it to the array.
 				UIImageAndTextTableCell *cell = [[UIImageAndTextTableCell alloc] init];
 				[cell setTitle:[NSString stringWithCString: data->tag]];
+				[cell setShowDisclosure: YES];
+				[cell setDisclosureStyle: 2];
 				[m_pAlbums addObject:cell];
 				[cell release];
 				count++;
