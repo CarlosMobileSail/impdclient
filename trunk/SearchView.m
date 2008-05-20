@@ -34,7 +34,7 @@
 #import <WebCore/WebFontCache.h>
 
 #import "SearchView.h"
-#import "application.h"
+#import "impdclientApp.h"
 
 //////////////////////////////////////////////////////////////////////////
 // SearchTableCell: implementation.
