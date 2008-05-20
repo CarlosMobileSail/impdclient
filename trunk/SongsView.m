@@ -29,7 +29,7 @@
 #import <UIKit/UITableColumn.h>
 
 #import "SongsView.h"
-#import "application.h"
+#import "impdclientApp.h"
 
 //////////////////////////////////////////////////////////////////////////
 // SongTableCell: implementation.

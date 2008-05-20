@@ -29,7 +29,7 @@
 #import <UIKit/UITableColumn.h>
 
 #import "AlbumsView.h"
-#import "application.h"
+#import "impdclientApp.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AlbumsView: implementation.

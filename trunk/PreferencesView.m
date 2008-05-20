@@ -27,7 +27,7 @@
 #import <UIKit/UISliderControl.h>
 
 #import "PreferencesView.h"
-#import "application.h"
+#import "impdclientApp.h"
 
 //////////////////////////////////////////////////////////////////////////
 // PreferencesView: implementation.

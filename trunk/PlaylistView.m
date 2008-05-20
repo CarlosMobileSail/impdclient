@@ -30,7 +30,7 @@
 #import <UIKit/UITableColumn.h>
 
 #import "PlaylistView.h"
-#import "application.h"
+#import "impdclientApp.h"
 
 //////////////////////////////////////////////////////////////////////////
 // SongTableCell: implementation.

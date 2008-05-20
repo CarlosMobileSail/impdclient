@@ -27,7 +27,7 @@
 #import <UIKit/UIWindow.h>
 #import <UIKit/UIHardware.h>
 
-#import "application.h"
+#import "impdclientApp.h"
 #import "PlaylistView.h"
 #import "ArtistsView.h"
 #import "AlbumsView.h"

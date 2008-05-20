@@ -29,7 +29,7 @@
 #import <UIKit/UITableColumn.h>
 
 #import "ArtistsView.h"
-#import "application.h"
+#import "impdclientApp.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ArtistsView: implementation.
