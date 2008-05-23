@@ -45,19 +45,19 @@
 
 @interface PreferencesView : UIView
 {
-	UINavigationBar* m_pNavBar;
-	MPDClientApplication* m_pApp;
+	UINavigationBar* _navBar;
+	MPDClientApplication* _app;
 	
-	UIPreferencesTable* m_pTable;
-	UIPreferencesTextTableCell* m_pHostnameCell;
-	UIPreferencesTextTableCell* m_pPortCell;
-	UIPreferencesTableCell* m_pVolumeCell;
-	UISliderControl* m_pVolumeSlider;
+	UIPreferencesTable* _table;
+	UIPreferencesTextTableCell* _hostnameCell;
+	UIPreferencesTextTableCell* _portCell;
+	UIPreferencesTableCell* _volumeCell;
+	UISliderControl* _volumeSlider;
 
-	MpdObj* m_pMPD;
+	MpdObj* _mpdServer;
 }
-
+- (void)dealloc;
 - (id)initWithFrame:(struct CGRect)frame;
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
-- (void)SaveSettings;
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer;
+- (void)saveSettings;
 @end

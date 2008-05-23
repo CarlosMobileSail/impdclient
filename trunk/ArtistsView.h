@@ -41,20 +41,21 @@
 
 @interface ArtistsView : UIView
 {
-	UINavigationBar* m_pNavigationBar;
-	UISectionList* m_pSectionList;
-	UINavigationItem* m_pTitle;
+	UINavigationBar* _navBar;
+	UISectionList* _sectionList;
+	UINavigationItem* _title;
 
-	MpdObj* m_pMPD;
-	MPDClientApplication* m_pApp;
+	MpdObj* _mpdServer;
+	MPDClientApplication* _app;
 	
-	NSMutableArray* m_pArtists;
-	NSMutableArray* m_pTableHeaders;
-	UITable* m_pTable;
+	NSMutableArray* _artists;
+	NSMutableArray* _tableHeaders;
+	UITable* _table;
 }
+- (void)dealloc;
 - (id)initWithFrame:(struct CGRect)frame;
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer;
 
-- (void)ShowArtists;
-- (void)UpdateTitle;
+- (void)showArtists;
+- (void)updateTitle;
 @end

@@ -42,35 +42,46 @@
 
 @implementation SearchTableCell
 
-- (id)initWithSong:(NSString *)song artist:(NSString *)artistinfo
+- (void)dealloc
+{
+	// Release all objects.
+	[_songName release];
+	[_artistName release];
+	// Call the base class.
+	[super dealloc];
+}
+
+
+- (id)initWithSong:(NSString *)song artist:(NSString *)artistInfo
 {
 	self = [super init];
-	song_name = [[UITextLabel alloc] initWithFrame: CGRectMake(36, 2, 260, 24)];
-	artist_name = [[UITextLabel alloc] initWithFrame: CGRectMake(37, 26, 260, 17)];
+	_songName = [[UITextLabel alloc] initWithFrame: CGRectMake(36, 2, 260, 24)];
+	_artistName = [[UITextLabel alloc] initWithFrame: CGRectMake(37, 26, 260, 17)];
 		
 	float c[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float h[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	
-	[song_name setText: song];
-	[song_name setFont: [UIImageAndTextTableCell defaultTitleFont]];
-	[song_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[song_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
+	[_songName setText: song];
+	[_songName setFont: [UIImageAndTextTableCell defaultTitleFont]];
+	[_songName setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
+	[_songName setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
 	
-	[artist_name setText: artistinfo];
-	[artist_name setFont: [UIDateLabel defaultFont]];
-	[artist_name setColor: CGColorCreateCopyWithAlpha([artist_name color], 0.4f)];
-	[artist_name setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
-	[artist_name setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
+	[_artistName setText: artistInfo];
+	[_artistName setFont: [UIDateLabel defaultFont]];
+	[_artistName setColor: CGColorCreateCopyWithAlpha([_artistName color], 0.4f)];
+	[_artistName setBackgroundColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), c)];
+	[_artistName setHighlightedColor: CGColorCreate(CGColorSpaceCreateDeviceRGB(), h)];
 
-	[self addSubview: artist_name];
-	[self addSubview: song_name];
+	[self addSubview: _artistName];
+	[self addSubview: _songName];
 	return self;
 }
 
+
 - (void) drawContentInRect: (struct CGRect)rect selected: (BOOL) selected
 {
-	[song_name setHighlighted: selected];
-	[artist_name setHighlighted: selected];
+	[_songName setHighlighted: selected];
+	[_artistName setHighlighted: selected];
 	[super drawContentInRect: rect selected: selected];
 }
 
@@ -82,62 +93,74 @@
 
 @implementation SearchView
 
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD
+- (void)dealloc
 {
-	m_pApp = pApp;
-	m_pMPD = pMPD;
+	// Release all objects.
+	[_table release];
+	[_searchBox release];
+	[_keyboard release];
+	[_navBar release];
+	// Call the base class.
+	[super dealloc];
+}
+
+
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer
+{
+	_app = app;
+	_mpdServer = mpdServer;
 	// Add the keyboard view to the main view and show it.
-	[m_pApp->m_pMainView addSubview: m_pKeyboard];
-	[self ShowKeyboard];
+	[_app->_mainView addSubview: _keyboard];
+	[self showKeyboard];
 }
 
 
 - (id)initWithFrame:(struct CGRect)frame
 {
 	self = [super initWithFrame:frame];
-	m_pApp = NULL;
-	m_pMPD = NULL;
+	_app = NULL;
+	_mpdServer = NULL;
 
 	// Create the storage array.
-	m_pSongs = [[NSMutableArray alloc] init];
+	_songs = [[NSMutableArray alloc] init];
 
 	// Create the table.
-	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
-	[self addSubview: m_pTable]; 
+	_table = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
+	[self addSubview: _table]; 
 	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
-	[m_pTable addTableColumn: col]; 
-	[m_pTable setDelegate: self];
-	[m_pTable setDataSource: self];
-	[m_pTable setSeparatorStyle:1];
-	[m_pTable setRowHeight:50.0f];
+	[_table addTableColumn: col]; 
+	[_table setDelegate: self];
+	[_table setDataSource: self];
+	[_table setSeparatorStyle:1];
+	[_table setRowHeight:50.0f];
 
 	// Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
-	[nav showLeftButton:nil withStyle:2 rightButton:@"Clear" withStyle:1];		// 1 = red.
-	[nav setBarStyle: 1];	// Dark style.
-	[nav setDelegate:self];
-	[nav enableAnimation];
+	_navBar = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
+	[_navBar showLeftButton:@"Artists" withStyle:2 rightButton:@"Clear" withStyle:1];		// 1 = red.
+	[_navBar setBarStyle: 1];	// Dark style.
+	[_navBar setDelegate:self];
+	[_navBar enableAnimation];
 
 	// Create the search box.
 	struct __GSFont* font = [NSClassFromString(@"WebFontCache") createFontWithFamily:@"Helvetica" traits:0 size:16];
-	m_pSearchBox = [[UISearchField alloc] initWithFrame:CGRectMake(10, ([UINavigationBar defaultSize].height - [UISearchField defaultHeight]) / 2. + 4, 320 - 80., [UISearchField defaultHeight])];
-	[m_pSearchBox setClearButtonStyle:0];
-	[m_pSearchBox setFont:font];
-	[m_pSearchBox setPaddingBottom:1.0f];
-	[m_pSearchBox setPaddingTop:5.0f];
-	[[m_pSearchBox textTraits] setAutoCapsType:0];
-	[[m_pSearchBox textTraits] setReturnKeyType:6];		// 6 = key next to spacebar shows 'search'.
-	[[m_pSearchBox textTraits] setEditingDelegate:self];
-	[m_pSearchBox setText:@""];
-	[m_pSearchBox setDisplayEnabled:YES];
-	[nav addSubview:m_pSearchBox];
+	_searchBox = [[UISearchField alloc] initWithFrame:CGRectMake(70, ([UINavigationBar defaultSize].height - [UISearchField defaultHeight]) / 2. + 4, 320 - 140., [UISearchField defaultHeight])];
+	[_searchBox setClearButtonStyle:0];
+	[_searchBox setFont:font];
+	[_searchBox setPaddingBottom:1.0f];
+	[_searchBox setPaddingTop:5.0f];
+	[[_searchBox textTraits] setAutoCapsType:0];
+	[[_searchBox textTraits] setReturnKeyType:6];		// 6 = key next to spacebar shows 'search'.
+	[[_searchBox textTraits] setEditingDelegate:self];
+	[_searchBox setText:@""];
+	[_searchBox setDisplayEnabled:YES];
+	[_navBar addSubview:_searchBox];
 	// Set the focus to the search box.
-	[m_pSearchBox becomeFirstResponder];
+	[_searchBox becomeFirstResponder];
 	
 	// Create the keyboard.
-	m_pKeyboard = [[UIKeyboard alloc] initWithDefaultSize];
+	_keyboard = [[UIKeyboard alloc] initWithDefaultSize];
 	
-	[self addSubview: nav];
+	[self addSubview: _navBar];
 	return self;
 }
 
@@ -145,17 +168,17 @@
 //  Other methods.
 //////////////////////////////////////////////////////////////////////////
 
-- (void)ShowSongs:(NSString *)searchtext
+- (void)showSongs:(NSString *)searchText
 {
-	if (!m_pMPD)
+	if (!_mpdServer)
 		return;
-	NSLog(@"Searching for: '%@'", searchtext);
+	NSLog(@"Searching for: '%@'", searchText);
 	// Clear the array.
-	[m_pSongs removeAllObjects];
+	[_songs removeAllObjects];
 	// Get the list of songs.
-	mpd_database_search_start(m_pMPD, FALSE);
-	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ANY, [searchtext cStringUsingEncoding:[NSString defaultCStringEncoding]]);
-	MpdData *data = mpd_database_search_commit(m_pMPD);
+	mpd_database_search_start(_mpdServer, FALSE);
+	mpd_database_search_add_constraint(_mpdServer, MPD_TAG_ITEM_ANY, [searchText cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	MpdData *data = mpd_database_search_commit(_mpdServer);
 	if (data) {
 		do {
 			// Create album object and add it to the array.
@@ -163,9 +186,9 @@
 				NSString* song = [NSString stringWithCString: data->song->title];
 				NSString* info = [NSString stringWithFormat: @"%s, %s", data->song->artist, data->song->album];
 				SearchTableCell* cell = [[SearchTableCell alloc] initWithSong:song artist:info];
-				strcpy(cell->m_Path, data->song->file);
+				strcpy(cell->_path, data->song->file);
 				[cell setImage:[UIImage applicationImageNamed:@"resources/add2.png"]];
-				[m_pSongs addObject:cell];
+				[_songs addObject:cell];
 				[cell release];
 			}
 			// Go to the next entry.
@@ -174,12 +197,12 @@
 	} else {
 		NSLog(@"No data found");
 		SearchTableCell* cell = [[SearchTableCell alloc] initWithSong:@"No matches found" artist:@""];
-		strcpy(cell->m_Path, "");
-		[m_pSongs addObject:cell];
+		strcpy(cell->_path, "");
+		[_songs addObject:cell];
 		[cell release];
 	}
 	// Update the table contents.
-	[m_pTable reloadData];
+	[_table reloadData];
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -190,19 +213,23 @@
 {
 	NSLog(@"SearchView: button %d", button);
 	if (button == 0) {
-		[m_pSearchBox setText:@""];
-		[m_pSongs removeAllObjects];
-		[m_pTable reloadData];
-		if (!m_KeyboardVisible)
-			[self ShowKeyboard];
+		[_searchBox setText:@""];
+		[_songs removeAllObjects];
+		[_table reloadData];
+		if (!_keyboardVisible)
+			[self showKeyboard];
+	} else {
+		// Go back to the artist view.
+		[_app showArtistsViewWithTransition:2];
+		[self hideKeyboard];
 	}
 }
 
 
 - (void)tableRowSelected:(NSNotification*)notification 
 {
-	SearchTableCell* pCell = [m_pTable cellAtRow:[m_pTable selectedRow] column:0];
-	if (strlen(pCell->m_Path) == 0)
+	SearchTableCell* pCell = [_table cellAtRow:[_table selectedRow] column:0];
+	if (strlen(pCell->_path) == 0)
 		return;
 	// Alert sheet attached to bottom of screen.
 	UIAlertSheet *alertSheet = [[UIAlertSheet alloc] initWithFrame:CGRectMake(0, 0, 320, 480)];
@@ -218,22 +245,22 @@
 {
 	if (button == 1) {
 		// Get selected cell and song name.
-		SearchTableCell* pCell = [m_pTable cellAtRow:[m_pTable selectedRow] column:0];
-		NSLog(@"Selected song: %s", pCell->m_Path);
+		SearchTableCell* pCell = [_table cellAtRow:[_table selectedRow] column:0];
+		NSLog(@"Selected song: %s", pCell->_path);
 		[pCell setSelected:FALSE withFade:TRUE];
-		mpd_playlist_add(m_pMPD, pCell->m_Path);
+		mpd_playlist_add(_mpdServer, pCell->_path);
 	}
 	[sheet dismiss];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-	return [m_pSongs count];
+	return [_songs count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-	return [m_pSongs objectAtIndex:row];
+	return [_songs objectAtIndex:row];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing
@@ -245,40 +272,40 @@
 {
 	if ([i characterAtIndex:0] == 0xA) {
 		//NSLog(@"user pressed search");
-		[self KeyboardReturnPressed];
+		[self keyboardReturnPressed];
 	}
 }
 
 - (void)keyboardInputChangedSelection:(id)whatisthis
 {
 	// when i tap the search field, hide if keyboard is already there, or show if it isn't
-	if (!m_KeyboardVisible)
-		[self ShowKeyboard];
+	if (!_keyboardVisible)
+		[self showKeyboard];
 }
 
 - (void)scrollerWillStartDragging:(id)whatisthis
 {
 	// hide keyboard when start scrolling
-	if (m_KeyboardVisible)
-		[self HideKeyboard];
+	if (_keyboardVisible)
+		[self hideKeyboard];
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Keyboard methods.
 //////////////////////////////////////////////////////////////////////////
 
-- (void)KeyboardReturnPressed
+- (void)keyboardReturnPressed
 {
 	// Hide the keyboard.
-	[self HideKeyboard];
+	[self hideKeyboard];
 	// Search the database.
-	[self ShowSongs:[m_pSearchBox text]];
+	[self showSongs:[_searchBox text]];
 }
 
 
-- (void)ShowKeyboard
+- (void)showKeyboard
 {
-	m_KeyboardVisible = YES;
+	_keyboardVisible = YES;
 
 	CGRect startFrame;
 	CGRect endFrame;
@@ -288,9 +315,9 @@
 	startFrame = endFrame;
 	startFrame.origin.y = 480;
 	
-	[m_pKeyboard setFrame:startFrame];
+	[_keyboard setFrame:startFrame];
 	
-	UIFrameAnimation *keyboardAnimation = [[UIFrameAnimation alloc] initWithTarget:m_pKeyboard];
+	UIFrameAnimation *keyboardAnimation = [[UIFrameAnimation alloc] initWithTarget:_keyboard];
 	[keyboardAnimation setStartFrame:startFrame];
 	[keyboardAnimation setEndFrame:endFrame];
 	[keyboardAnimation setSignificantRectFields:2];
@@ -302,9 +329,9 @@
 }
 
 
-- (void)HideKeyboard
+- (void)hideKeyboard
 {
-	m_KeyboardVisible = NO;
+	_keyboardVisible = NO;
 	
 	CGRect startFrame;
 	CGRect endFrame;
@@ -314,9 +341,9 @@
 	endFrame = startFrame;
 	endFrame.origin.y = 480;
 	
-	[m_pKeyboard setFrame:startFrame];
+	[_keyboard setFrame:startFrame];
 		
-	UIFrameAnimation *keyboardAnimation = [[UIFrameAnimation alloc] initWithTarget:m_pKeyboard];
+	UIFrameAnimation *keyboardAnimation = [[UIFrameAnimation alloc] initWithTarget:_keyboard];
 	[keyboardAnimation setStartFrame:startFrame];
 	[keyboardAnimation setEndFrame:endFrame];
 	[keyboardAnimation setSignificantRectFields:2];

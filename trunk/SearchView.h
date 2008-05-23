@@ -40,13 +40,14 @@
 
 @interface SearchTableCell : UIImageAndTextTableCell
 {
-	UITextLabel* song_name;
-	UITextLabel* artist_name;
+	UITextLabel* _songName;
+	UITextLabel* _artistName;
 	
 @public
-	char m_Path[256];
+	char _path[256];
 }
-- (id)initWithSong:(NSString *)song artist:(NSString *)artistinfo;
+- (void)dealloc;
+- (id)initWithSong:(NSString *)song artist:(NSString *)artistInfo;
 @end
 
 
@@ -56,21 +57,23 @@
 
 @interface SearchView : UIView
 {
-	UINavigationBar* m_pNavigationBar;
-	UISearchField* m_pSearchBox;
-	UIKeyboard* m_pKeyboard;
-	BOOL m_KeyboardVisible;
+	UINavigationBar* _navBar;
+	UISearchField* _searchBox;
+	UIKeyboard* _keyboard;
+	BOOL _keyboardVisible;
 
-	MpdObj* m_pMPD;
-	MPDClientApplication* m_pApp;
+	MpdObj* _mpdServer;
+	MPDClientApplication* _app;
 	
-	NSMutableArray* m_pSongs;
-	UITable* m_pTable;
+	NSMutableArray* _songs;
+	UITable* _table;
 }
+- (void)dealloc;
 - (id)initWithFrame:(struct CGRect)frame;
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer;
 
-- (void)KeyboardReturnPressed;
-- (void)ShowKeyboard;
-- (void)HideKeyboard;
+- (void)showSongs:(NSString *)searchText;
+- (void)keyboardReturnPressed;
+- (void)showKeyboard;
+- (void)hideKeyboard;
 @end

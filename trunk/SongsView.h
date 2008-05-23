@@ -41,7 +41,7 @@
 @interface SongTableCell : UIImageAndTextTableCell
 {
 @public
-	char m_Path[256];
+	char _path[256];
 }
 @end
 
@@ -51,20 +51,21 @@
 
 @interface SongsView : UIView
 {
-	UINavigationBar* m_pNavigationBar;
-	UINavigationItem* m_pTitle;
-	NSString* m_pArtistName;
-	NSString* m_pAlbumName;
+	UINavigationBar* _navBar;
+	UINavigationItem* _title;
+	NSString* _artistName;
+	NSString* _albumName;
 
-	MpdObj* m_pMPD;
-	MPDClientApplication* m_pApp;
+	MpdObj* _mpdServer;
+	MPDClientApplication* _app;
 	
-	NSMutableArray* m_pSongs;
-	UITable* m_pTable;
+	NSMutableArray* _songs;
+	UITable* _table;
 }
+- (void)dealloc;
 - (id)initWithFrame:(struct CGRect)frame;
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer;
 
-- (void)ShowSongs:(NSString *)albumname artist:(NSString *)name;
-- (BOOL)AddSong:(NSString *)name;
+- (void)showSongs:(NSString *)albumName artist:(NSString *)name;
+- (BOOL)addSong:(NSString *)name;
 @end

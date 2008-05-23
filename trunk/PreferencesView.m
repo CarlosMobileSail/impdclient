@@ -35,13 +35,27 @@
 
 @implementation PreferencesView
 
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD
+- (void)dealloc
 {
-	m_pApp = pApp;
-	m_pMPD = pMPD;
+	// Release all objects.
+	[_hostnameCell release];
+	[_portCell release];
+	[_volumeCell release];
+	[_volumeSlider release];
+	[_table release];
+	[_navBar release];
+	// Call the base class.
+	[super dealloc];
+}
+
+
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer
+{
+	_app = app;
+	_mpdServer = mpdServer;
 	// Set the values to the correct ones.
-	int volume = mpd_status_get_volume(m_pMPD);
-	[m_pVolumeSlider setValue: volume];
+	int volume = mpd_status_get_volume(_mpdServer);
+	[_volumeSlider setValue: volume];
 }
 
 
@@ -49,74 +63,80 @@
 {
 	self = [super initWithFrame:frame];
 	
-	m_pNavBar = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
-	[m_pNavBar setDelegate:self];
-	[m_pNavBar setBarStyle: 1];	// Dark style.
-	[m_pNavBar enableAnimation]; 
-	[m_pNavBar showButtonsWithLeftTitle:@"Close" rightTitle:nil leftBack:nil];
- 	[m_pNavBar pushNavigationItem: [[UINavigationItem alloc] initWithTitle: @"Preferences"]];
-	[self addSubview:m_pNavBar];
+	_navBar = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
+	[_navBar setDelegate:self];
+	[_navBar setBarStyle: 1];	// Dark style.
+	[_navBar enableAnimation]; 
+ 	[_navBar showLeftButton:@"Hide" withStyle:0 rightButton:@"About" withStyle:0];
+	[_navBar pushNavigationItem: [[UINavigationItem alloc] initWithTitle: @"Preferences"]];
+	[self addSubview:_navBar];
 
-	m_pTable = [[UIPreferencesTable alloc] initWithFrame:CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
-	[m_pTable setDataSource:self];
-	[m_pTable setDelegate:self];
-	[m_pTable reloadData];
-	[self addSubview:m_pTable];
+	_table = [[UIPreferencesTable alloc] initWithFrame:CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
+	[_table setDataSource:self];
+	[_table setDelegate:self];
+	[_table reloadData];
+	[self addSubview:_table];
 	
 	// Get the hostname and port number.
 	NSUserDefaults* pDefaults = [NSUserDefaults standardUserDefaults];
 	NSString* hostname = [pDefaults stringForKey:@"hostname"];
 	int port = [pDefaults integerForKey:@"port"];
-	m_pHostnameCell = [[UIPreferencesTextTableCell alloc] initWithFrame:CGRectMake(0.0f, 48.0f, frame.size.width, 48.0f)];
-	[m_pHostnameCell setTitle:@"Hostname:"];
-	[[[m_pHostnameCell textField] textTraits] setAutoCapsType:0];
-	[m_pHostnameCell setValue:hostname];
+	_hostnameCell = [[UIPreferencesTextTableCell alloc] initWithFrame:CGRectMake(0.0f, 48.0f, frame.size.width, 48.0f)];
+	[_hostnameCell setTitle:@"Hostname:"];
+	[[[_hostnameCell textField] textTraits] setAutoCapsType:0];
+	[_hostnameCell setValue:hostname];
 	
-	m_pPortCell = [[UIPreferencesTextTableCell alloc] initWithFrame:CGRectMake(0.0f, 48.0f, frame.size.width, 48.0f)];
-	[m_pPortCell setTitle:@"Port:"];
-	[[[m_pPortCell textField] textTraits] setAutoCapsType:0];
-	[[[m_pPortCell textField] textTraits] setPreferredKeyboardType:2];		// numbers only.
-	[m_pPortCell setValue:[NSString stringWithFormat: @"%i", port]];
+	_portCell = [[UIPreferencesTextTableCell alloc] initWithFrame:CGRectMake(0.0f, 48.0f, frame.size.width, 48.0f)];
+	[_portCell setTitle:@"Port:"];
+	[[[_portCell textField] textTraits] setAutoCapsType:0];
+	[[[_portCell textField] textTraits] setPreferredKeyboardType:2];		// numbers only.
+	[_portCell setValue:[NSString stringWithFormat: @"%i", port]];
 
-	m_pVolumeCell = [[UIPreferencesTableCell alloc] init];
-	[m_pVolumeCell setTitle:@"Volume"];
-	[m_pVolumeCell setShowSelection:NO];
+	_volumeCell = [[UIPreferencesTableCell alloc] init];
+	[_volumeCell setTitle:@"Volume"];
+	[_volumeCell setShowSelection:NO];
 	
-	m_pVolumeSlider = [[UISliderControl alloc] initWithFrame:CGRectMake(90, 12, 210, 24)];
-	[m_pVolumeSlider setMinValue:0.0];
-	[m_pVolumeSlider setMaxValue:100.0];
-	[m_pVolumeSlider setShowValue:YES];
-	[m_pVolumeSlider addTarget:self action:@selector(ChangeVolume) forEvents:1|4]; // mouseDown | mouseDragged
-	[m_pVolumeCell addSubview:m_pVolumeSlider];
+	_volumeSlider = [[UISliderControl alloc] initWithFrame:CGRectMake(90, 12, 210, 24)];
+	[_volumeSlider setMinValue:0.0];
+	[_volumeSlider setMaxValue:100.0];
+	[_volumeSlider setShowValue:YES];
+	[_volumeSlider addTarget:self action:@selector(ChangeVolume) forEvents:1|4]; // mouseDown | mouseDragged
+	[_volumeCell addSubview:_volumeSlider];
 	
 	return self;
 }
 
-- (void)dealloc
+
+- (void)changeVolume
 {
-	[super dealloc];
-	
-	[m_pHostnameCell release];
-	[m_pPortCell release];
-
-	[m_pTable release];
-	[m_pNavBar release];
-}
-
-
-- (void)ChangeVolume
-{
-	int volume = [m_pVolumeSlider value];
-	mpd_status_set_volume(m_pMPD, volume);
+	int volume = [_volumeSlider value];
+	mpd_status_set_volume(_mpdServer, volume);
 	//	NSLog(@"Change volume %d", volume);
 }
 
 
-- (void)SaveSettings
+- (void)saveSettings
 {
 	NSUserDefaults* pDefaults = [NSUserDefaults standardUserDefaults];
-	[pDefaults setObject:[m_pHostnameCell value] forKey:@"hostname"];
-	[pDefaults setInteger:[[m_pPortCell value] intValue] forKey:@"port"];
+	[pDefaults setObject:[_hostnameCell value] forKey:@"hostname"];
+	[pDefaults setInteger:[[_portCell value] intValue] forKey:@"port"];
+}
+
+
+- (void)displayAbout
+{
+	UIAlertSheet * hotSheet = [[UIAlertSheet alloc]
+							   initWithTitle:@"iMPDclient v1.0"
+							   buttons:[NSArray arrayWithObject:NSLocalizedString(@"OK", nil)]
+							   defaultButtonIndex:0
+							   delegate:self
+							   context:self];
+	
+	[hotSheet setBodyText:@"iPod remote for your MPD server. Copyright 2008, Boris Nagels"];
+	[hotSheet setDimsBackground:YES];
+	[hotSheet setRunsModal:YES];
+	[hotSheet setShowsOverSpringBoardAlerts:NO];
+	[hotSheet popupAlertAnimated:YES];	
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -160,13 +180,13 @@
 {
 	if (group == 0) {
 		switch (row) {
-		case 0:	return m_pHostnameCell;	break;
-		case 1:	return m_pPortCell;		break;
+		case 0:	return _hostnameCell;	break;
+		case 1:	return _portCell;		break;
 		}
 	}
 	if (group == 1) {
 		switch (row) {
-		case 0: return m_pVolumeCell;	break;
+		case 0: return _volumeCell;	break;
 		}
 	}
 	return nil;
@@ -180,10 +200,21 @@
 {
 	NSLog(@"PreferencesView: button %d", button);
 	if (button == 1) {
-		[m_pApp showPlaylistViewWithTransition:5];
+		[_app showPlaylistViewWithTransition:5];
 		// Save the settings.
-		[self SaveSettings];
+		[self saveSettings];
+	} else {
+		// Show the about dialog.
+		[self displayAbout];
 	}
+}
+
+
+- (void)alertSheet:(id)sheet buttonClicked:(int)buttonIndex
+{
+	// Just close and release all sheets.
+	[sheet dismissAnimated:YES];
+	[sheet release];
 }
 
 @end

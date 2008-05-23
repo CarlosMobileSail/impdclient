@@ -37,86 +37,99 @@
 
 @implementation ArtistsView
 
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD
+- (void)dealloc
 {
-	m_pApp = pApp;
-	m_pMPD = pMPD;
+	// Release all objects.
+	[_table release];
+	[_artists release];
+	[_tableHeaders release];
+	[_sectionList release];
+	[_navBar release];
+	// Call the base class.
+	[super dealloc];
+}
+
+
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer
+{
+	_app = app;
+	_mpdServer = mpdServer;
 }
 
 
 - (id)initWithFrame:(struct CGRect)frame
 {
 	self = [super initWithFrame:frame];
-	m_pApp = NULL;
-	m_pMPD = NULL;
+	_app = NULL;
+	_mpdServer = NULL;
 	
 	// Create the storage arrays.
-	m_pArtists = [[NSMutableArray alloc] init];
-	m_pTableHeaders = [[NSMutableArray alloc] init];
+	_artists = [[NSMutableArray alloc] init];
+	_tableHeaders = [[NSMutableArray alloc] init];
 	
 	CGRect aRect = CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT);
 	// Create the section list.
-	m_pSectionList = [[UISectionList alloc] initWithFrame:aRect showSectionIndex:YES];
-	[m_pSectionList setDataSource:self];
-	[m_pSectionList reloadData];
-	[self addSubview:m_pSectionList];
+	_sectionList = [[UISectionList alloc] initWithFrame:aRect showSectionIndex:YES];
+	[_sectionList setDataSource:self];
+	[_sectionList reloadData];
+	[self addSubview:_sectionList];
 
 	// Get the real table.
-	m_pTable = [m_pSectionList table];
+	_table = [_sectionList table];
 	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320];
-	[m_pTable addTableColumn: col]; 
-	[m_pTable setDelegate: self];
-	[m_pTable setSeparatorStyle:1];
-	[m_pTable setRowHeight:42.0f];
+	[_table addTableColumn: col]; 
+	[_table setDelegate: self];
+	[_table setSeparatorStyle:1];
+	[_table setRowHeight:42.0f];
 
 	// Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
-	[nav showLeftButton:@"Playlist" withStyle:2 rightButton:@"Search" withStyle:3];		// 2 = arrow left, 3 = blue.
-	[nav setBarStyle: 1];	// Dark style.
-	[nav setDelegate:self];
-	[nav enableAnimation];
+	_navBar = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
+	[_navBar showLeftButton:@"Playlist" withStyle:2 rightButton:@"Search" withStyle:3];		// 2 = arrow left, 3 = blue.
+	[_navBar setBarStyle: 1];	// Dark style.
+	[_navBar setDelegate:self];
+	[_navBar enableAnimation];
 
-	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
-	[nav pushNavigationItem: m_pTitle];
+	_title = [[UINavigationItem alloc] initWithTitle:@"--:--"];
+	[_navBar pushNavigationItem: _title];
 	
-	[self addSubview: nav];
+	[self addSubview: _navBar];
 	return self;
 }
 
 //  --- OTHER METHODS -----------------------------------------------
 
-- (void)ShowArtists
+- (void)showArtists
 {
-	if (!m_pMPD)
+	if (!_mpdServer)
 		return;
 	// Clear the arrays.
-	[m_pArtists removeAllObjects];
-	[m_pTableHeaders removeAllObjects];
+	[_artists removeAllObjects];
+	[_tableHeaders removeAllObjects];
 	// Get the list of artists.
-	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_ARTIST);
-	MpdData *data = mpd_database_search_commit(m_pMPD);
+	mpd_database_search_field_start(_mpdServer, MPD_TAG_ITEM_ARTIST);
+	MpdData *data = mpd_database_search_commit(_mpdServer);
 	if (data) {
 		NSString* prevSection = @"";
 		int count = 0;
 		do {
 			if (data->type == MPD_DATA_TYPE_TAG) {
 				// Convert the name.
-				NSString* artistname = [NSString stringWithCString: data->tag];
+				NSString* artistName = [NSString stringWithCString: data->tag];
 				// Determine the first letters for the section list.
-				NSString* firstletter = [artistname substringWithRange:NSMakeRange(0,1)];
-				if (![firstletter isEqual:prevSection]) {
-					prevSection = [firstletter copy];
+				NSString* firstLetter = [artistName substringWithRange:NSMakeRange(0,1)];
+				if (![firstLetter isEqual:prevSection]) {
+					prevSection = [firstLetter copy];
 					// NSLog(@"%@ - %d", firstletter, count);
 					NSMutableDictionary* cellDict = [[NSMutableDictionary alloc] initWithCapacity:2];
-					[cellDict setObject:firstletter forKey:@"title"];
+					[cellDict setObject:firstLetter forKey:@"title"];
 					[cellDict setObject:[[NSNumber alloc] initWithInt:count] forKey:@"beginRow"];
-					[m_pTableHeaders addObject: cellDict];
+					[_tableHeaders addObject: cellDict];
 					[cellDict release];
 				}
 				// Create artist object and add it to the array.
-				UIImageAndTextTableCell *cell = [[UIImageAndTextTableCell alloc] init];
-				[cell setTitle:artistname];
-				[m_pArtists addObject:cell];
+				UIImageAndTextTableCell* cell = [[UIImageAndTextTableCell alloc] init];
+				[cell setTitle:artistName];
+				[_artists addObject:cell];
 				[cell release];
 				count++;
 			}
@@ -126,16 +139,16 @@
 	} else
 		NSLog(@"No data found");
 	// Update the table contents.
-	[m_pSectionList reloadData];
+	[_sectionList reloadData];
 }
 
 
-- (void)UpdateTitle
+- (void)updateTitle
 {
-	int totalTime = mpd_status_get_total_song_time(m_pMPD);
-	int elapsedTime = mpd_status_get_elapsed_song_time(m_pMPD);
+	int totalTime = mpd_status_get_total_song_time(_mpdServer);
+	int elapsedTime = mpd_status_get_elapsed_song_time(_mpdServer);
 	NSString* str = [NSString stringWithFormat:@"%d:%02d - %d:%02d", elapsedTime / 60, elapsedTime % 60, totalTime / 60, totalTime % 60];
-	[m_pTitle setTitle: str]; 
+	[_title setTitle: str]; 
 }
 
 //  --- DELEGATE METHODS -----------------------------------------------
@@ -144,43 +157,43 @@
 {
 	NSLog(@"ArtistView: button %d", button);
 	if (button == 0)
-		[m_pApp showSearchViewWithTransition:1];
+		[_app showSearchViewWithTransition:1];
 	else if (button == 1)
-		[m_pApp showPlaylistViewWithTransition:2];
+		[_app showPlaylistViewWithTransition:2];
 }
 
 
 - (void)tableRowSelected:(NSNotification*)notification 
 {
 	// Get selected cell and artist name.
-	UIImageAndTextTableCell* pCell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
-	NSLog(@"Selected artist: %@", [pCell title]);
+	UIImageAndTextTableCell* cell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
+	NSLog(@"Selected artist: %@", [cell title]);
 	// Show the albums of the selected artist.
-	[pCell setSelected:FALSE withFade:TRUE];
-	[m_pApp showAlbumsViewWithTransition:1 artist:[pCell title]];
+	[cell setSelected:FALSE withFade:TRUE];
+	[_app showAlbumsViewWithTransition:1 artist:[cell title]];
 }
 
 
 - (int)numberOfSectionsInSectionList:(UISectionList *)aSectionList {
-	return [m_pTableHeaders count];
+	return [_tableHeaders count];
 }
 
 - (NSString *)sectionList:(UISectionList *)aSectionList titleForSection:(int)section {
-	return [[m_pTableHeaders objectAtIndex:section] objectForKey:@"title"];
+	return [[_tableHeaders objectAtIndex:section] objectForKey:@"title"];
 }
 
 - (int)sectionList:(UISectionList *)aSectionList rowForSection:(int)section {
-	return [[[m_pTableHeaders objectAtIndex:section] valueForKey:@"beginRow"] intValue];
+	return [[[_tableHeaders objectAtIndex:section] valueForKey:@"beginRow"] intValue];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-	return [m_pArtists count];
+	return [_artists count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-	return [m_pArtists objectAtIndex:row];
+	return [_artists objectAtIndex:row];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing

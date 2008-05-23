@@ -37,68 +37,80 @@
 
 @implementation AlbumsView
 
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD
+- (void)dealloc
 {
-	m_pApp = pApp;
-	m_pMPD = pMPD;
+	// Release all objects.
+	[_table release];
+	[_albums release];
+	[_title release];
+	[_navBar release];
+	// Call the base class.
+	[super dealloc];
+}
+
+
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer
+{
+	_app = app;
+	_mpdServer = mpdServer;
 }
 
 
 - (id)initWithFrame:(struct CGRect)frame
 {
 	self = [super initWithFrame:frame];
-	m_pApp = NULL;
-	m_pMPD = NULL;
+	_app = NULL;
+	_mpdServer = NULL;
 
 	// Create the storage array.
-	m_pAlbums = [[NSMutableArray alloc] init];
+	_albums = [[NSMutableArray alloc] init];
 
 	// Create the table.
-	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
-	[self addSubview: m_pTable]; 
-	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
-	[m_pTable addTableColumn: col]; 
-	[m_pTable setDelegate: self];
-	[m_pTable setDataSource: self];
-	[m_pTable setSeparatorStyle:1];
-	[m_pTable setRowHeight:42.0f];
+	_table = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
+	[self addSubview: _table]; 
+	UITableColumn* col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
+	[_table addTableColumn: col]; 
+	[_table setDelegate: self];
+	[_table setDataSource: self];
+	[_table setSeparatorStyle:1];
+	[_table setRowHeight:42.0f];
 
 	// Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
-	[nav showLeftButton:@"Artists" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
-	[nav setBarStyle: 1];	// Dark style.
-	[nav setDelegate:self];
-	[nav enableAnimation];
+	_navBar = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
+	[_navBar showLeftButton:@"Artists" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
+	[_navBar setBarStyle: 1];	// Dark style.
+	[_navBar setDelegate:self];
+	[_navBar enableAnimation];
 
-	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
-	[nav pushNavigationItem: m_pTitle];
+	_title = [[UINavigationItem alloc] initWithTitle:@"--:--"];
+	[_navBar pushNavigationItem: _title];
 
-	[self addSubview: nav];
+	[self addSubview: _navBar];
 	return self;
 }
 
 //  --- OTHER METHODS -----------------------------------------------
 
-- (void)ShowAlbums:(NSString *)artistname
+- (void)showAlbums:(NSString *)artistName
 {
-	if (!m_pMPD)
+	if (!_mpdServer)
 		return;
 	// Clear the array.
-	[m_pAlbums removeAllObjects];
+	[_albums removeAllObjects];
 	// Get the list of albums.
-	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_ALBUM);
-	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ARTIST, [artistname cStringUsingEncoding:[NSString defaultCStringEncoding]]);
-	MpdData *data = mpd_database_search_commit(m_pMPD);
+	mpd_database_search_field_start(_mpdServer, MPD_TAG_ITEM_ALBUM);
+	mpd_database_search_add_constraint(_mpdServer, MPD_TAG_ITEM_ARTIST, [artistName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	MpdData *data = mpd_database_search_commit(_mpdServer);
 	if (data) {
 		int count = 0;
 		do {
 			if (data->type == MPD_DATA_TYPE_TAG) {
 				// Create album object and add it to the array.
-				UIImageAndTextTableCell *cell = [[UIImageAndTextTableCell alloc] init];
+				UIImageAndTextTableCell* cell = [[UIImageAndTextTableCell alloc] init];
 				[cell setTitle:[NSString stringWithCString: data->tag]];
 				[cell setShowDisclosure: YES];
 				[cell setDisclosureStyle: 2];
-				[m_pAlbums addObject:cell];
+				[_albums addObject:cell];
 				[cell release];
 				count++;
 			}
@@ -108,9 +120,9 @@
 	} else
 		NSLog(@"No data found");
 	// Update the table contents.
-	[m_pTable reloadData];
-	[m_pTitle setTitle: artistname];
-	m_pArtistName = [artistname copy];
+	[_table reloadData];
+	[_title setTitle: artistName];
+	_artistName = [artistName copy];
 }
 
 //  --- DELEGATE METHODS -----------------------------------------------
@@ -119,31 +131,31 @@
 {
 	NSLog(@"AlbumsView: button %d", button);
 	if (button == 0)
-		[m_pApp cleanUp];
+		[_app cleanUp];
 	else if (button == 1)
-		[m_pApp showArtistsViewWithTransition:2];
+		[_app showArtistsViewWithTransition:2];
 }
 
 
 - (void)tableRowSelected:(NSNotification*)notification 
 {
 	// Get selected cell and album name.
-	UIImageAndTextTableCell* pCell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
-	NSLog(@"Selected album: %@", [pCell title]);
+	UIImageAndTextTableCell* cell = [[notification object] cellAtRow:[[notification object] selectedRow] column:0];
+	NSLog(@"Selected album: %@", [cell title]);
 	// Show the songs of the selected album.
-	[pCell setSelected:FALSE withFade:TRUE];
-	[m_pApp showSongsViewWithTransition:1 album:[pCell title] artist:m_pArtistName];
+	[cell setSelected:FALSE withFade:TRUE];
+	[_app showSongsViewWithTransition:1 album:[cell title] artist:_artistName];
 }
 
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-	return [m_pAlbums count];
+	return [_albums count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-	return [m_pAlbums objectAtIndex:row];
+	return [_albums objectAtIndex:row];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing

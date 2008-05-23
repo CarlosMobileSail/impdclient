@@ -44,64 +44,76 @@
 
 @implementation SongsView
 
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD
+- (void)dealloc
 {
-	m_pApp = pApp;
-	m_pMPD = pMPD;
+	// Release all objects.
+	[_table release];
+	[_songs release];
+	[_title release];
+	[_navBar release];
+	// Call the base class.
+	[super dealloc];
+}
+
+
+- (void)initialize:(MPDClientApplication* )app mpd:(MpdObj *)mpdServer
+{
+	_app = app;
+	_mpdServer = mpdServer;
 }
 
 
 - (id)initWithFrame:(struct CGRect)frame
 {
 	self = [super initWithFrame:frame];
-	m_pApp = NULL;
-	m_pMPD = NULL;
+	_app = NULL;
+	_mpdServer = NULL;
 
 	// Create the storage array.
-	m_pSongs = [[NSMutableArray alloc] init];
+	_songs = [[NSMutableArray alloc] init];
 
 	// Create the table.
-	m_pTable = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
-	[self addSubview: m_pTable]; 
-	UITableColumn *col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
-	[m_pTable addTableColumn: col]; 
-	[m_pTable setDelegate: self];
-	[m_pTable setDataSource: self];
-	[m_pTable setSeparatorStyle:1];
-	[m_pTable setRowHeight:42.0f];
+	_table = [[UITable alloc] initWithFrame: CGRectMake(0, NAVBARHEIGHT, 320, MAXHEIGHT)];
+	[self addSubview: _table]; 
+	UITableColumn* col = [[UITableColumn alloc] initWithTitle: @"iMPDclient" identifier: @"column1" width: 320.0f];
+	[_table addTableColumn: col]; 
+	[_table setDelegate: self];
+	[_table setDataSource: self];
+	[_table setSeparatorStyle:1];
+	[_table setRowHeight:42.0f];
 
 	// Create the navigation bar.
-	UINavigationBar* nav = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
-	[nav showLeftButton:@"Albums" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
-	[nav setBarStyle: 1];	// Dark style.
-	[nav setDelegate:self];
-	[nav enableAnimation];
+	_navBar = [[UINavigationBar alloc] initWithFrame: CGRectMake(0, 0, 320, NAVBARHEIGHT)];
+	[_navBar showLeftButton:@"Albums" withStyle:2 rightButton:nil withStyle:0];		// 2 = arrow left.
+	[_navBar setBarStyle: 1];	// Dark style.
+	[_navBar setDelegate:self];
+	[_navBar enableAnimation];
 
-	m_pTitle = [[UINavigationItem alloc] initWithTitle:@"--:--"];
-	[nav pushNavigationItem: m_pTitle];
+	_title = [[UINavigationItem alloc] initWithTitle:@"--:--"];
+	[_navBar pushNavigationItem: _title];
 
-	[self addSubview: nav];
+	[self addSubview: _navBar];
 	return self;
 }
 
 //  --- OTHER METHODS -----------------------------------------------
 
-- (void)ShowSongs:(NSString *)albumname artist:(NSString *)name
+- (void)showSongs:(NSString *)albumName artist:(NSString *)name
 {
-	if (!m_pMPD)
+	if (!_mpdServer)
 		return;
 	// Clear the array.
-	[m_pSongs removeAllObjects];
+	[_songs removeAllObjects];
 	// Add the 'add all' item.
 	SongTableCell *cell = [[SongTableCell alloc] init];
 	[cell setTitle:@"All songs"];
 	[cell setImage:[UIImage applicationImageNamed:@"resources/add.png"]];
-	[m_pSongs addObject:cell];
+	[_songs addObject:cell];
 	[cell release];
 	// Get the list of songs.
-	mpd_database_search_start(m_pMPD, TRUE);
-	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ALBUM, [albumname cStringUsingEncoding:[NSString defaultCStringEncoding]]);
-	MpdData *data = mpd_database_search_commit(m_pMPD);
+	mpd_database_search_start(_mpdServer, TRUE);
+	mpd_database_search_add_constraint(_mpdServer, MPD_TAG_ITEM_ALBUM, [albumName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	MpdData *data = mpd_database_search_commit(_mpdServer);
 	if (data) {
 		do {
 			// Create album object and add it to the array.
@@ -110,10 +122,10 @@
 				[cell setTitle:[NSString stringWithCString: data->tag]];
 			if (data->type == MPD_DATA_TYPE_SONG) {
 				[cell setTitle:[NSString stringWithFormat: @"%s %s", data->song->track, data->song->title]];
-				strcpy(cell->m_Path, data->song->file);
+				strcpy(cell->_path, data->song->file);
 			}
 			[cell setImage:[UIImage applicationImageNamed:@"resources/add2.png"]];
-			[m_pSongs addObject:cell];
+			[_songs addObject:cell];
 			[cell release];
 			// Go to the next entry.
 			data = mpd_data_get_next(data);
@@ -121,26 +133,26 @@
 	} else
 		NSLog(@"No data found");
 	// Update the table contents.
-	[m_pTable reloadData];
-	[m_pTitle setTitle: albumname];
-	m_pArtistName = [name copy];
-	m_pAlbumName = [albumname copy];
+	[_table reloadData];
+	[_title setTitle: albumName];
+	_artistName = [name copy];
+	_albumName = [albumName copy];
 }
 
 
-- (BOOL)AddSong:(NSString *)name
+- (BOOL)addSong:(NSString *)name
 {
 	// Find the full path and add it to the playlist.
-	mpd_database_search_field_start(m_pMPD, MPD_TAG_ITEM_FILENAME);
-	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ARTIST, [m_pArtistName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
-	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_ALBUM, [m_pAlbumName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
-	mpd_database_search_add_constraint(m_pMPD, MPD_TAG_ITEM_TITLE, [name cStringUsingEncoding:[NSString defaultCStringEncoding]]);
-	MpdData* data = mpd_database_search_commit(m_pMPD);
+	mpd_database_search_field_start(_mpdServer, MPD_TAG_ITEM_FILENAME);
+	mpd_database_search_add_constraint(_mpdServer, MPD_TAG_ITEM_ARTIST, [_artistName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	mpd_database_search_add_constraint(_mpdServer, MPD_TAG_ITEM_ALBUM, [_albumName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	mpd_database_search_add_constraint(_mpdServer, MPD_TAG_ITEM_TITLE, [name cStringUsingEncoding:[NSString defaultCStringEncoding]]);
+	MpdData* data = mpd_database_search_commit(_mpdServer);
 	BOOL bSuccess = FALSE;
 	if (data) {
 		if (data->type == MPD_DATA_TYPE_TAG) {
 			// Add the song to the current playlist.
-			mpd_playlist_queue_add(m_pMPD, data->tag);
+			mpd_playlist_queue_add(_mpdServer, data->tag);
 			NSLog(@"Added file: %s", data->tag);
 			bSuccess = TRUE;
 		}
@@ -154,9 +166,9 @@
 {
 	NSLog(@"SongsView: button %d", button);
 	if (button == 0)
-		[m_pApp cleanUp];
+		[_app cleanUp];
 	else if (button == 1)
-		[m_pApp showAlbumsViewWithTransition:2 artist:m_pArtistName];
+		[_app showAlbumsViewWithTransition:2 artist:_artistName];
 }
 
 
@@ -176,36 +188,36 @@
 {
 	if (button == 1) {
 		// Get selected cell and song name.
-		SongTableCell* pCell = [m_pTable cellAtRow:[m_pTable selectedRow] column:0];
+		SongTableCell* pCell = [_table cellAtRow:[_table selectedRow] column:0];
 		NSLog(@"Selected song: %@", [pCell title]);
 		// Anwer of the clear question is yes: add the song(s) to the list.
-		if ([m_pTable selectedRow] == 0) {
+		if ([_table selectedRow] == 0) {
 			// Add all songs.
 			int i;
-			for (i = 1;i < [m_pSongs count];i++) {
-				pCell = [m_pSongs objectAtIndex:i];
-				mpd_playlist_queue_add(m_pMPD, pCell->m_Path);
+			for (i = 1;i < [_songs count];i++) {
+				pCell = [_songs objectAtIndex:i];
+				mpd_playlist_queue_add(_mpdServer, pCell->_path);
 			}
 		} else {
 			[pCell setSelected:FALSE withFade:TRUE];
-			mpd_playlist_queue_add(m_pMPD, pCell->m_Path);
+			mpd_playlist_queue_add(_mpdServer, pCell->_path);
 		}
 		// Flush the queue.
-		mpd_playlist_queue_commit(m_pMPD);
+		mpd_playlist_queue_commit(_mpdServer);
 		// Go back to the album view.
-		[m_pApp showAlbumsViewWithTransition:2 artist:m_pArtistName];
+		[_app showAlbumsViewWithTransition:2 artist:_artistName];
 	}
 	[sheet dismiss];
 }
 
 - (int) numberOfRowsInTable: (UITable *)table
 {
-	return [m_pSongs count];
+	return [_songs count];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col
 {
-	return [m_pSongs objectAtIndex:row];
+	return [_songs objectAtIndex:row];
 }
 
 - (UITableCell *) table: (UITable *)table cellForRow: (int)row column: (int)col reusing: (BOOL) reusing

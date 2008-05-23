@@ -23,6 +23,7 @@
 
 #import <UIKit/UIKit.h>
 #import <UIKit/UIApplication.h>
+#import <UIKit/UIProgressHUD.h>
 
 #import "libmpd/libmpd.h"
 
@@ -49,36 +50,39 @@
 @interface MPDClientApplication :  UIApplication
 {
 @public
-	UIView* m_pMainView;
+	UIView* _mainView;
 
 @protected
-	UIWindow* m_pWindow;
-	UITransitionView* m_pTransitionView;
-	PlaylistView* m_pPlaylistView;
-	ArtistsView* m_pArtistsView;
-	AlbumsView* m_pAlbumsView;
-	SongsView* m_pSongsView;
-	SearchView* m_pSearchView;
-	PreferencesView* m_pPreferencesView;
+	UIWindow* _window;
+	UITransitionView* _transitionView;
+	UIProgressHUD* _hud;
+	
+	PlaylistView* _playlistView;
+	ArtistsView* _artistsView;
+	AlbumsView* _albumsView;
+	SongsView* _songsView;
+	SearchView* _searchView;
+	PreferencesView* _preferencesView;
 
-	UIButtonBar* m_pButtonBar;
-	BOOL m_ShowPlaylist;
-	BOOL m_ShowPreferences;
-	BOOL m_Connected;
-	int m_ReconnectCount;
+	UIButtonBar* _buttonBar;
+	BOOL _showPlaylist;
+	BOOL _showPreferences;
+	BOOL _isConnected;
+	int _reconnectCount;
 
-	MpdObj* m_pMPD;
-	NSTimer* m_pTimer;
+	MpdObj* _mpdServer;
+	NSTimer* _timer;
 }
 - (void)dealloc;
 - (void)cleanUp;
 
-- (void)open_connection;
-- (void)UpdateTitle;
-- (void)ShowPlaylist;
+- (void)openConnection;
+- (void)updateTitle;
+- (void)showPlaylist;
 - (NSArray *)buttonBarItems;
-- (void)UpdateButtonBar;
+- (void)updateButtonBar;
 - (id)timertick: (NSTimer *)timer;
+- (void)waitingForServer:(BOOL)isWaiting;
 
 - (void)showPlaylistViewWithTransition:(int)trans;
 - (void)showArtistsViewWithTransition:(int)trans;

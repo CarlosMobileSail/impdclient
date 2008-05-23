@@ -14,6 +14,7 @@ endif
 INFOPLIST=Info.plist
 DEFAULT_BACKGROUND=Default.png
 APP_ICON=icon.png
+APP_RESOURCES=resources/*.png
 SOURCES=\
 	main.m \
 	impdclientApp.m \
@@ -43,6 +44,7 @@ SOURCES_ABS=$(addprefix $(SRCROOT)/,$(SOURCES))
 INFOPLIST_ABS=$(addprefix $(SRCROOT)/,$(INFOPLIST))
 DEFAULT_BACKGROUND_ABS=$(addprefix $(SRCROOT)/,$(DEFAULT_BACKGROUND))
 APP_ICON_ABS=$(addprefix $(SRCROOT)/,$(APP_ICON))
+APP_RESOURCES_ABS=$(addprefix $(SRCROOT)/,$(APP_RESOURCES))
 OBJECTS=\
 	$(patsubst %.c,%.o,$(filter %.c,$(SOURCES))) \
 	$(patsubst %.cc,%.o,$(filter %.cc,$(SOURCES))) \
@@ -60,9 +62,11 @@ $(PRODUCT_ABS): $(APP_ABS) $(OBJECTS_ABS)
 
 $(APP_ABS): $(INFOPLIST_ABS)
 	mkdir -p $(APP_ABS)
+	mkdir -p $(APP_ABS)/resources
 	cp $(INFOPLIST_ABS) $(APP_ABS)/
 	cp $(DEFAULT_BACKGROUND_ABS) $(APP_ABS)/
 	cp $(APP_ICON_ABS) $(APP_ABS)/
+	cp $(APP_RESOURCES_ABS) $(APP_ABS)/resources/
 
 $(CONFIGURATION_TEMP_DIR)/%.o: $(SRCROOT)/%.m
 	mkdir -p $(dir $@)

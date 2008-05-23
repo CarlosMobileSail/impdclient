@@ -35,29 +35,22 @@
 		080E96DDFE201D6D7F000001 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
-				A16576CA0DE372FB00CEC991 /* SearchView.h */,
-				A16576CB0DE372FB00CEC991 /* SearchView.m */,
-				A16576CC0DE372FB00CEC991 /* SongsView.h */,
-				A16576CD0DE372FB00CEC991 /* SongsView.m */,
-				A16576C60DE372ED00CEC991 /* PlaylistView.h */,
-				A16576C70DE372ED00CEC991 /* PlaylistView.m */,
-				A16576C80DE372ED00CEC991 /* PreferencesView.h */,
-				A16576C90DE372ED00CEC991 /* PreferencesView.m */,
 				A16576C20DE372DA00CEC991 /* AlbumsView.h */,
 				A16576C30DE372DA00CEC991 /* AlbumsView.m */,
 				A16576C40DE372DA00CEC991 /* ArtistsView.h */,
 				A16576C50DE372DA00CEC991 /* ArtistsView.m */,
+				A16576C60DE372ED00CEC991 /* PlaylistView.h */,
+				A16576C70DE372ED00CEC991 /* PlaylistView.m */,
+				A16576C80DE372ED00CEC991 /* PreferencesView.h */,
+				A16576C90DE372ED00CEC991 /* PreferencesView.m */,
+				A16576CA0DE372FB00CEC991 /* SearchView.h */,
+				A16576CB0DE372FB00CEC991 /* SearchView.m */,
+				A16576CC0DE372FB00CEC991 /* SongsView.h */,
+				A16576CD0DE372FB00CEC991 /* SongsView.m */,
 				D90F56B90C6719EF007AE76B /* impdclientApp.m */,
 				D90F56BA0C6719EF007AE76B /* impdclientApp.h */,
 			);
 			name = Classes;
-			sourceTree = "<group>";
-		};
-		19C28FACFE9D520D11CA2CBB /* Products */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 		29B97314FDCFA39411CA2CEA /* impdclient */ = {
@@ -68,7 +61,6 @@
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
-				19C28FACFE9D520D11CA2CBB /* Products */,
 			);
 			name = impdclient;
 			sourceTree = "<group>";

@@ -40,18 +40,19 @@
 
 @interface AlbumsView : UIView
 {
-	UINavigationBar* m_pNavigationBar;
-	UINavigationItem* m_pTitle;
-	NSString* m_pArtistName;
+	UINavigationBar* _navBar;
+	UINavigationItem* _title;
+	NSString* _artistName;
 
-	MpdObj* m_pMPD;
-	MPDClientApplication* m_pApp;
+	MpdObj* _mpdServer;
+	MPDClientApplication* _app;
 	
-	NSMutableArray* m_pAlbums;
-	UITable* m_pTable;
+	NSMutableArray* _albums;
+	UITable* _table;
 }
+- (void)dealloc;
 - (id)initWithFrame:(struct CGRect)frame;
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer;
 
-- (void)ShowAlbums:(NSString *)artistname;
+- (void)showAlbums:(NSString *)artistName;
 @end

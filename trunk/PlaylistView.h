@@ -43,14 +43,15 @@
 
 @interface PlaylistTableCell : UITableCell
 {
-	UITextLabel* song_name;
-	UITextLabel* artist_name;
-	UIImageView* play_image;
+	UITextLabel* _songName;
+	UITextLabel* _artistName;
+	UIImageView* _playImage;
 	
 @public
-	int m_SongID;
+	int _songID;
 }
-- (id) initWithSong:(NSString *)song artist:(NSString *)artistinfo current:(BOOL)bCurrent;
+- (void)dealloc;
+- (id)initWithSong:(NSString *)song artist:(NSString *)artistInfo current:(BOOL)currentSong;
 @end
 
 //////////////////////////////////////////////////////////////////////////
@@ -59,11 +60,11 @@
 
 @interface PlaylistTable : UITable
 {
-	struct timeval last;
-	int lastClickX;
-	int lastClickY;
+	struct timeval _last;
+	int _lastClickX;
+	int _lastClickY;
 }
-- (void)Initialize;
+- (void)initialize;
 - (void)mouseUp:(GSEvent *)event;
 @end
 
@@ -73,20 +74,21 @@
 
 @interface PlaylistView : UIView
 {
-	UINavigationBar* m_pNavigationBar;
-	UINavigationItem* m_pTitle;
+	UINavigationBar* _navBar;
+	UINavigationItem* _title;
 	BOOL m_Editing;
 
-	MpdObj* m_pMPD;
-	MPDClientApplication* m_pApp;
+	MpdObj* _mpdServer;
+	MPDClientApplication* _app;
 	
-	NSMutableArray* m_pSongs;
-	PlaylistTable* m_pTable;
+	NSMutableArray* _songs;
+	PlaylistTable* _table;
 }
+- (void)dealloc;
 - (id)initWithFrame:(struct CGRect)frame;
-- (void)Initialize:(MPDClientApplication* )pApp mpd:(MpdObj *)pMPD;
+- (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer;
 
-- (void)ShowPlaylist;
-- (void)UpdateTitle;
+- (void)showPlaylist;
+- (void)updateTitle;
 - (void)doubleTap:(id)sender;
 @end
