@@ -100,7 +100,7 @@
 	[_volumeSlider setMinValue:0.0];
 	[_volumeSlider setMaxValue:100.0];
 	[_volumeSlider setShowValue:YES];
-	[_volumeSlider addTarget:self action:@selector(ChangeVolume) forEvents:1|4]; // mouseDown | mouseDragged
+	[_volumeSlider addTarget:self action:@selector(changeVolume) forEvents:1|4]; // mouseDown | mouseDragged
 	[_volumeCell addSubview:_volumeSlider];
 	
 	return self;
