@@ -48,11 +48,13 @@
 	MPDClientApplication* _app;
 	
 	NSMutableArray* _albums;
+	NSString* _firstAlbumName;
 	UITable* _table;
 }
 - (void)dealloc;
 - (id)initWithFrame:(struct CGRect)frame;
 - (void)initialize:(MPDClientApplication *)app mpd:(MpdObj *)mpdServer;
 
-- (void)showAlbums:(NSString *)artistName;
+- (int)showAlbums:(NSString *)artistName;
+- (NSString *)getFirstAlbumName;
 @end

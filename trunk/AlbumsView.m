@@ -91,18 +91,19 @@
 
 //  --- OTHER METHODS -----------------------------------------------
 
-- (void)showAlbums:(NSString *)artistName
+- (int)showAlbums:(NSString *)artistName
 {
 	if (!_mpdServer)
-		return;
+		return 0;
 	// Clear the array.
 	[_albums removeAllObjects];
+	_firstAlbumName = @"";
 	// Get the list of albums.
 	mpd_database_search_field_start(_mpdServer, MPD_TAG_ITEM_ALBUM);
 	mpd_database_search_add_constraint(_mpdServer, MPD_TAG_ITEM_ARTIST, [artistName cStringUsingEncoding:[NSString defaultCStringEncoding]]);
 	MpdData *data = mpd_database_search_commit(_mpdServer);
+	int count = 0;
 	if (data) {
-		int count = 0;
 		do {
 			if (data->type == MPD_DATA_TYPE_TAG) {
 				// Create album object and add it to the array.
@@ -112,6 +113,8 @@
 				[cell setDisclosureStyle: 2];
 				[_albums addObject:cell];
 				[cell release];
+				if (count == 0)
+					_firstAlbumName = [NSString stringWithCString: data->tag];
 				count++;
 			}
 			// Go to the next entry.
@@ -123,6 +126,13 @@
 	[_table reloadData];
 	[_title setTitle: artistName];
 	_artistName = [artistName copy];
+	return count;
+}
+
+
+- (NSString *)getFirstAlbumName
+{
+	return _firstAlbumName;
 }
 
 //  --- DELEGATE METHODS -----------------------------------------------

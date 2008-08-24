@@ -411,8 +411,12 @@ void status_changed(MpdObj *mi, ChangedStatusType what, void *userdata)
 		[_albumsView initialize:self mpd:_mpdServer];
 	}
 	_showPlaylist = FALSE;
-	[_albumsView showAlbums:name];
-	[_transitionView transition:trans toView:_albumsView];
+	if ([_albumsView showAlbums:name] > 1)
+		[_transitionView transition:trans toView:_albumsView];
+	else {
+		// Show directly the only album contents.
+		[self showSongsViewWithTransition:trans album:[_albumsView getFirstAlbumName] artist:name];
+	}
 }
 
 
